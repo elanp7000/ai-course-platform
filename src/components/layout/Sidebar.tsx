@@ -10,7 +10,7 @@ export function Sidebar() {
             </Link>
 
             <nav className="flex-1 p-4 space-y-1">
-                <NavItem href="/" icon={Home} label="대시보드" />
+                <NavItem href="/dashboard" icon={Home} label="대시보드" />
                 <NavItem href="/notices" icon={List} label="공지사항" />
                 <NavItem href="/discussions" icon={MessageCircle} label="질문·토론" />
                 <NavItem href="/portfolio" icon={User} label="내 포트폴리오" />
