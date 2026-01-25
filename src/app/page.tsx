@@ -10,15 +10,15 @@ export default function LandingPage() {
             {/* Header / Nav */}
             <header className="fixed top-0 w-full z-50 border-b border-white/10 bg-slate-900/80 backdrop-blur-md">
                 <div className="container mx-auto px-6 h-16 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
+                    <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
                         <div className="bg-gradient-to-tr from-blue-500 to-indigo-600 p-2 rounded-lg">
                             <Sparkles className="w-5 h-5 text-white" />
                         </div>
                         <span className="font-bold text-xl tracking-tight">AI Course</span>
-                    </div>
+                    </Link>
                     <div className="flex items-center gap-4">
                         <Link href="/login" className="text-slate-300 hover:text-white transition-colors text-sm font-medium">
-                           로그인
+                            로그인
                         </Link>
                         <Link href="/login?mode=signup" className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-full text-sm font-medium transition-all shadow-lg shadow-blue-500/20">
                             시작하기
@@ -38,18 +38,18 @@ export default function LandingPage() {
                 <div className="container mx-auto px-6 relative z-10 text-center">
                     <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-blue-300 text-sm font-medium backdrop-blur-sm mb-6 animate-fade-in-up">
                         <span className="relative flex h-2 w-2">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                          <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
                         </span>
                         AI 마스터 여정을 시작하세요
                     </div>
-                    
+
                     <h1 className="text-5xl md:text-7xl font-bold leading-tight tracking-tight mb-8 bg-gradient-to-b from-white to-slate-400 bg-clip-text text-transparent max-w-4xl mx-auto">
                         AI 도구 활용 능력을 <br /> 완벽하게 마스터하세요
                     </h1>
-                    
+
                     <p className="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed">
-                        ChatGPT부터 Midjourney까지. <br className="md:hidden"/> 실무에 즉시 적용 가능한 AI 기술을 체계적인 커리큘럼으로 배워보세요.
+                        ChatGPT부터 Midjourney까지. <br className="md:hidden" /> 실무에 즉시 적용 가능한 AI 기술을 체계적인 커리큘럼으로 배워보세요.
                     </p>
 
                     <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -64,7 +64,7 @@ export default function LandingPage() {
 
                     {/* Stats */}
                     <div className="mt-20 pt-10 border-t border-white/5 grid grid-cols-2 md:grid-cols-4 gap-8 max-w-4xl mx-auto">
-                         {[
+                        {[
                             { label: "수강생", value: "1,200+" },
                             { label: "강의 만족도", value: "4.9/5" },
                             { label: "실습 프로젝트", value: "15+" },
@@ -117,18 +117,18 @@ export default function LandingPage() {
                 </div>
             </section>
 
-             {/* Footer */}
-             <footer className="py-12 border-t border-white/10 bg-slate-900 text-sm text-slate-500">
+            {/* Footer */}
+            <footer className="py-12 border-t border-white/10 bg-slate-900 text-sm text-slate-500">
                 <div className="container mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-4">
                     <div className="flex items-center gap-2">
-                         <Sparkles className="w-4 h-4 text-blue-500" />
-                         <span className="font-semibold text-slate-300">AI Course Platform</span>
+                        <Sparkles className="w-4 h-4 text-blue-500" />
+                        <span className="font-semibold text-slate-300">AI Course Platform</span>
                     </div>
                     <div>
                         &copy; {new Date().getFullYear()} All rights reserved.
                     </div>
                 </div>
-             </footer>
+            </footer>
         </div>
     );
 }
