@@ -111,6 +111,26 @@ create policy "Instructors can update feedback." on submissions
     exists (select 1 from users where id = auth.uid() and role = 'instructor')
   );
 
+
+-- 6. User Progress Table
+create table public.user_progress (
+  id uuid default uuid_generate_v4() primary key,
+  user_id uuid references public.users(id) not null,
+  material_id uuid references public.materials(id) on delete cascade not null,
+  is_completed boolean default false,
+  completed_at timestamp with time zone,
+  unique(user_id, material_id)
+);
+
+alter table public.user_progress enable row level security;
+
+-- Policies for User Progress
+create policy "Users can view their own progress." on user_progress
+  for select using (auth.uid() = user_id);
+
+create policy "Users can update their own progress." on user_progress
+  for all using (auth.uid() = user_id);
+
 -- Trigger to handle new user signup
 create or replace function public.handle_new_user()
 returns trigger as $$
