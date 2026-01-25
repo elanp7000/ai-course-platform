@@ -89,7 +89,7 @@ export default function DashboardPage() {
         setWeeks(weeks.map(w => ({
             ...w,
             is_current: w.db_id === weekId,
-            status: w.db_id === weekId ? "in-progress" : (w.week_number < targetWeek.week_number ? "completed" : "locked")
+            status: w.db_id === weekId ? "in-progress" : "completed" // Simplification: Always unlocked to allow instructor access
         })));
 
         // Reset all weeks first
