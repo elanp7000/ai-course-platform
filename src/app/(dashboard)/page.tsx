@@ -63,21 +63,26 @@ export default function DashboardPage() {
         e.preventDefault();
         if (!editingWeek) return;
 
-        const { error } = await supabase
+        const { data, error } = await supabase
             .from('weeks')
             .update({
                 title: editForm.title,
                 description: editForm.description
             })
-            .eq('id', editingWeek.db_id);
+            .eq('id', editingWeek.db_id)
+            .select();
 
         if (error) {
             console.error('Error updating week:', error);
             alert('업데이트 실패: ' + error.message);
+        } else if (data.length === 0) {
+            console.error('Update returned 0 rows. RLS likely blocking access.');
+            alert('업데이트 실패: 권한이 부족하여 변경사항이 저장되지 않았습니다. (RLS Blocked)');
         } else {
             // Optimistic update
             setWeeks(weeks.map(w => w.db_id === editingWeek.db_id ? { ...w, ...editForm } : w));
             setEditingWeek(null);
+            alert('성공적으로 저장되었습니다.');
         }
     };
 
@@ -92,15 +97,13 @@ export default function DashboardPage() {
             status: w.db_id === weekId ? "in-progress" : "completed" // Simplification: Always unlocked to allow instructor access
         })));
 
-        // Reset all weeks first
-        await supabase.from('weeks').update({ is_current: false }).neq('id', '00000000-0000-0000-0000-000000000000');
-
-        // Set new current week
-        const { error } = await supabase.from('weeks').update({ is_current: true }).eq('id', weekId);
+        // Use RPC to atomically set current week and unset others
+        const { error } = await supabase.rpc('set_current_week', { p_week_id: weekId });
 
         if (error) {
             console.error('Error setting current week:', error);
-            // Revert or alert needed in real prod, but strict reload ensures consistency
+            alert('현재 주차 설정 실패: ' + error.message);
+            // Revert or alert
             window.location.reload();
         }
     };
