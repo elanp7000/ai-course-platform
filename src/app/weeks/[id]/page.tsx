@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/utils/supabase/client";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, BookOpen, CheckCircle, Circle, FileText, PlayCircle, Plus, Trash2, X, Image as ImageIcon } from "lucide-react";
+import { ArrowLeft, BookOpen, FileText, PlayCircle, Plus, Trash2, X, Image as ImageIcon } from "lucide-react";
 
 type Material = {
     id: string;
@@ -26,7 +26,6 @@ export default function WeekDetailPage() {
     const id = params.id as string;
     const [week, setWeek] = useState<Week | null>(null);
     const [materials, setMaterials] = useState<Material[]>([]);
-    const [progress, setProgress] = useState<Set<string>>(new Set());
     const [loading, setLoading] = useState(true);
     const [user, setUser] = useState<any>(null);
 
@@ -56,17 +55,6 @@ export default function WeekDetailPage() {
                     .single();
 
                 setIsInstructor(userData?.role === 'instructor');
-
-                // Fetch Progress
-                const { data: progressData } = await supabase
-                    .from('user_progress')
-                    .select('material_id')
-                    .eq('user_id', session.user.id)
-                    .eq('is_completed', true);
-
-                if (progressData) {
-                    setProgress(new Set(progressData.map(p => p.material_id)));
-                }
             }
 
             // Fetch Week Data
@@ -95,7 +83,6 @@ export default function WeekDetailPage() {
             if (materialsError) {
                 console.error("Error fetching materials:", materialsError);
             } else {
-                // Cast type forcibly if needed or rely on loose matching
                 setMaterials((materialsData as any[]) || []);
             }
 
@@ -104,33 +91,6 @@ export default function WeekDetailPage() {
 
         fetchData();
     }, [id]);
-
-    const toggleProgress = async (materialId: string) => {
-        if (!user) {
-            alert("로그인이 필요한 기능입니다.");
-            return;
-        }
-
-        const newIsCompleted = !progress.has(materialId);
-        const newProgress = new Set(progress);
-        if (newIsCompleted) newProgress.add(materialId);
-        else newProgress.delete(materialId);
-        setProgress(newProgress);
-
-        const { error } = await supabase.from('user_progress').upsert({
-            user_id: user.id,
-            material_id: materialId,
-            is_completed: newIsCompleted,
-            completed_at: newIsCompleted ? new Date().toISOString() : null
-        }, { onConflict: 'user_id, material_id' });
-
-        if (error) {
-            console.error("Failed to update progress", error);
-            if (newIsCompleted) newProgress.delete(materialId);
-            else newProgress.add(materialId);
-            setProgress(new Set(newProgress));
-        }
-    };
 
     const uploadFile = async (file: File) => {
         const fileExt = file.name.split('.').pop();
@@ -240,10 +200,6 @@ export default function WeekDetailPage() {
 
     if (!week) return <div>Week not found</div>;
 
-    const progressPercentage = materials.length > 0
-        ? Math.round((progress.size / materials.length) * 100)
-        : 0;
-
     return (
         <div className="max-w-5xl mx-auto pb-20">
             {/* Header / Nav */}
@@ -271,19 +227,6 @@ export default function WeekDetailPage() {
                         <p className="text-gray-500 text-lg max-w-2xl">
                             {week.description}
                         </p>
-                    </div>
-
-                    <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm min-w-[200px]">
-                        <div className="flex justify-between items-center mb-2">
-                            <span className="text-sm font-medium text-gray-600">진도율</span>
-                            <span className="text-lg font-bold text-blue-600">{progressPercentage}%</span>
-                        </div>
-                        <div className="w-full bg-gray-100 rounded-full h-2">
-                            <div
-                                className="bg-blue-600 h-2 rounded-full transition-all duration-500"
-                                style={{ width: `${progressPercentage}%` }}
-                            />
-                        </div>
                     </div>
                 </div>
             </div>
@@ -405,7 +348,6 @@ export default function WeekDetailPage() {
 
                 <div className="grid gap-4">
                     {materials.map((material) => {
-                        const isCompleted = progress.has(material.id);
                         let Icon = FileText;
                         if (material.type === 'video') Icon = PlayCircle;
                         if (material.type === 'image') Icon = ImageIcon;
@@ -414,28 +356,24 @@ export default function WeekDetailPage() {
                         return (
                             <div
                                 key={material.id}
-                                className={`group bg-white rounded-xl border p-6 transition-all ${isCompleted ? "border-green-200 bg-green-50/30" : "hover:border-blue-300 hover:shadow-md"}`}
+                                className="group bg-white rounded-xl border p-6 hover:border-blue-300 hover:shadow-md transition-all"
                             >
                                 <div className="flex items-start gap-4">
-                                    <div className={`p-3 rounded-lg ${isCompleted ? "bg-green-100 text-green-600" : "bg-blue-50 text-blue-600"}`}>
+                                    <div className="p-3 rounded-lg bg-blue-50 text-blue-600">
                                         <Icon className="w-6 h-6" />
                                     </div>
 
                                     <div className="flex-1">
                                         <div className="flex justify-between items-start">
-                                            <h3 className={`text-lg font-bold mb-1 group-hover:text-blue-700 transition-colors ${isCompleted ? "text-gray-800" : "text-gray-900"}`}>
+                                            <h3 className="text-lg font-bold mb-1 group-hover:text-blue-700 transition-colors text-gray-900">
                                                 {material.title}
                                             </h3>
 
-                                            {isInstructor ? (
+                                            {isInstructor && (
                                                 <div className="flex items-center gap-2">
                                                     <button onClick={() => handleEditClick(material)} className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded"><FileText className="w-5 h-5" /></button>
                                                     <button onClick={() => handleDeleteMaterial(material.id)} className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"><Trash2 className="w-5 h-5" /></button>
                                                 </div>
-                                            ) : (
-                                                <button onClick={() => toggleProgress(material.id)} className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${isCompleted ? "bg-green-100 text-green-700 hover:bg-green-200" : "bg-gray-100 text-gray-500 hover:bg-gray-200"}`}>
-                                                    {isCompleted ? <><CheckCircle className="w-4 h-4" />완료됨</> : <><Circle className="w-4 h-4" />완료 표시</>}
-                                                </button>
                                             )}
                                         </div>
 
