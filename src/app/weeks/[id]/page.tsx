@@ -218,7 +218,7 @@ export default function WeekDetailPage() {
         <div className="max-w-5xl mx-auto pb-20">
             {/* Header / Nav */}
             <div className="mb-8">
-                <Link href="/" className="inline-flex items-center text-gray-500 hover:text-blue-600 transition-colors mb-6">
+                <Link href="/dashboard" className="inline-flex items-center text-gray-500 hover:text-blue-600 transition-colors mb-6 mt-8">
                     <ArrowLeft className="w-4 h-4 mr-2" />
                     대시보드로 돌아가기
                 </Link>
