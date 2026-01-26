@@ -305,18 +305,7 @@ function WeekCard({ week, isInstructor, onEdit, onSetCurrent }: { week: any, isI
                         {week.description}
                     </p>
 
-                    {/* Visual Progress Bar (Mock) */}
-                    {!isLocked && (
-                        <div className="mt-auto pt-4 border-t border-gray-50">
-                            <div className="flex justify-between text-xs text-gray-500 mb-1">
-                                <span>학습 진행률</span>
-                                <span>0%</span>
-                            </div>
-                            <div className="w-full bg-gray-100 rounded-full h-1.5">
-                                <div className="bg-blue-500 h-1.5 rounded-full w-0"></div>
-                            </div>
-                        </div>
-                    )}
+                    {/* Visual Progress Bar (Removed) */}
                 </div>
             </Link>
         </div>
