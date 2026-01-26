@@ -17,9 +17,6 @@ export default function LandingPage() {
                         <span className="font-bold text-xl tracking-tight">AI Course</span>
                     </Link>
                     <div className="flex items-center gap-4">
-                        <Link href="/login" className="text-slate-300 hover:text-white transition-colors text-sm font-medium">
-                            로그인
-                        </Link>
                         <Link href="/login?mode=signup" className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-full text-sm font-medium transition-all shadow-lg shadow-blue-500/20">
                             시작하기
                         </Link>
