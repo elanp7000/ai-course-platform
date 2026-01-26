@@ -381,13 +381,9 @@ function NoticeItem({ notice, isInstructor, onEdit, onDelete }: { notice: Notice
                 )}
             </div>
 
-            <div className="prose prose-sm max-w-none text-gray-600 whitespace-pre-wrap mb-4">
-                {notice.content}
-            </div>
-
             {/* Image Carousel */}
             {hasImages && (
-                <div className="relative mt-4 bg-gray-100 rounded-xl overflow-hidden aspect-video max-h-[400px]">
+                <div className="relative mb-6 bg-gray-50 rounded-xl overflow-hidden border border-gray-100 shadow-sm aspect-video group/image">
                     <img
                         src={notice.images![currentImageIndex]}
                         alt={`Notice image ${currentImageIndex + 1}`}
@@ -399,24 +395,27 @@ function NoticeItem({ notice, isInstructor, onEdit, onDelete }: { notice: Notice
                         <>
                             <button
                                 onClick={prevImage}
-                                className="absolute left-2 top-1/2 -translate-y-1/2 p-2 bg-black/30 text-white rounded-full hover:bg-black/50 transition-colors"
+                                className="absolute left-2 top-1/2 -translate-y-1/2 p-2 bg-black/30 text-white rounded-full hover:bg-black/50 transition-colors opacity-0 group-hover/image:opacity-100"
                             >
                                 <ChevronLeft className="w-6 h-6" />
                             </button>
                             <button
                                 onClick={nextImage}
-                                className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-black/30 text-white rounded-full hover:bg-black/50 transition-colors"
+                                className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-black/30 text-white rounded-full hover:bg-black/50 transition-colors opacity-0 group-hover/image:opacity-100"
                             >
                                 <ChevronRight className="w-6 h-6" />
                             </button>
-                            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/30 px-3 py-1 rounded-full text-white text-xs">
+                            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/30 px-3 py-1 rounded-full text-white text-xs backdrop-blur-sm">
                                 {currentImageIndex + 1} / {notice.images!.length}
                             </div>
                         </>
                     )}
                 </div>
             )}
+
+            <div className="prose prose-sm max-w-none text-gray-700 whitespace-pre-wrap leading-relaxed">
+                {notice.content}
+            </div>
         </div>
     );
 }
-
