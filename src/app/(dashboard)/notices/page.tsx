@@ -238,7 +238,7 @@ export default function NoticesPage() {
 
                             {/* Image Upload Area */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">이미지 첨부</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">이미지 첨부 (선택)</label>
 
                                 {/* Upload Dropzone */}
                                 <div className="relative group">
@@ -309,7 +309,7 @@ export default function NoticesPage() {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">내용</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">공지 내용</label>
                                 <textarea
                                     value={formData.content}
                                     onChange={(e) => setFormData({ ...formData, content: e.target.value })}
