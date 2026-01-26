@@ -413,7 +413,7 @@ function NoticeItem({ notice, isInstructor, onEdit, onDelete }: { notice: Notice
                 </div>
             )}
 
-            <div className="prose prose-sm max-w-none text-gray-700 whitespace-pre-wrap leading-relaxed">
+            <div className="prose prose-sm max-w-none text-gray-700 whitespace-pre-wrap leading-relaxed mt-4">
                 {notice.content}
             </div>
         </div>
