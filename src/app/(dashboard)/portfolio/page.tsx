@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/utils/supabase/client";
 import { Plus, Pencil, Trash2, X, Globe, User } from "lucide-react";
 
@@ -22,6 +22,11 @@ export default function PortfolioPage() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
     const [formData, setFormData] = useState({ title: "", description: "", project_url: "" });
+
+    // File Upload State
+    const [isUploading, setIsUploading] = useState(false);
+    const imageInputRef = useRef<HTMLInputElement>(null);
+    const videoInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         fetchPortfolios();
@@ -47,6 +52,57 @@ export default function PortfolioPage() {
         setIsLoading(false);
     };
 
+    const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'video') => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        setIsUploading(true);
+        try {
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+            const filePath = `${currentUser.id}/${fileName}`;
+
+            const { error: uploadError } = await supabase.storage
+                .from('portfolio_uploads')
+                .upload(filePath, file);
+
+            if (uploadError) throw uploadError;
+
+            const { data: { publicUrl } } = supabase.storage
+                .from('portfolio_uploads')
+                .getPublicUrl(filePath);
+
+            const markdown = type === 'image'
+                ? `\n![${file.name}](${publicUrl})\n`
+                : `\n[동영상 보기](${publicUrl})\n`;
+
+            setFormData(prev => ({
+                ...prev,
+                description: prev.description + markdown
+            }));
+
+        } catch (error: any) {
+            console.error('Upload failed:', error);
+            alert('업로드 실패: ' + error.message);
+        } finally {
+            setIsUploading(false);
+            if (event.target) event.target.value = '';
+        }
+    };
+
+    const handleLinkInsert = () => {
+        const url = prompt("링크 주소(URL)를 입력해주세요:");
+        if (!url) return;
+
+        const text = prompt("링크 텍스트를 입력해주세요 (선택사항):") || "링크";
+        const markdown = `\n[${text}](${url})\n`;
+
+        setFormData(prev => ({
+            ...prev,
+            description: prev.description + markdown
+        }));
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!currentUser) return alert("로그인이 필요합니다.");
@@ -65,7 +121,7 @@ export default function PortfolioPage() {
                     .update({
                         title: generatedTitle,
                         description: formData.description,
-                        project_url: formData.project_url
+                        project_url: formData.project_url // Optional: Keep passing it or pass empty string if removed from UI
                     })
                     .eq('id', editingId);
 
@@ -188,7 +244,7 @@ export default function PortfolioPage() {
                                     )}
                                 </div>
 
-                                <p className="text-gray-500 text-sm mb-6 flex-1 line-clamp-3">
+                                <p className="text-gray-500 text-sm mb-6 flex-1 line-clamp-3 whitespace-pre-wrap">
                                     {item.description || "설명이 없습니다."}
                                 </p>
 
@@ -196,6 +252,7 @@ export default function PortfolioPage() {
                                     <span className="text-xs text-gray-400">
                                         {new Date(item.created_at).toLocaleDateString()}
                                     </span>
+                                    {/* Project URL is now part of description, but keeping this if we still store it in project_url column for legacy or if user added explicitly */}
                                     {item.project_url && (
                                         <a
                                             href={item.project_url}
@@ -253,45 +310,68 @@ export default function PortfolioPage() {
 
                                 {/* Media Placeholders */}
                                 <div className="flex gap-2 mt-2">
-                                    <button type="button" className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="사진 추가">
+                                    <button
+                                        type="button"
+                                        onClick={() => imageInputRef.current?.click()}
+                                        className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors relative"
+                                        title="사진 추가"
+                                    >
                                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                        {isUploading && <span className="absolute top-0 right-0 w-2 h-2 bg-blue-600 rounded-full animate-ping"></span>}
                                     </button>
-                                    <button type="button" className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="동영상 추가">
+                                    <button
+                                        type="button"
+                                        onClick={() => videoInputRef.current?.click()}
+                                        className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors relative"
+                                        title="동영상 추가"
+                                    >
                                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                                        {isUploading && <span className="absolute top-0 right-0 w-2 h-2 bg-blue-600 rounded-full animate-ping"></span>}
                                     </button>
-                                    <button type="button" className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="링크 추가">
+                                    <button
+                                        type="button"
+                                        onClick={handleLinkInsert}
+                                        className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                        title="링크 추가"
+                                    >
                                         <Globe className="w-5 h-5" />
                                     </button>
-                                </div>
-                            </div>
 
-                            {/* Project URL (Optional) */}
-                            <div>
-                                <div className="relative">
-                                    <Globe className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+                                    {/* Hidden File Inputs */}
                                     <input
-                                        type="url"
-                                        value={formData.project_url}
-                                        onChange={(e) => setFormData({ ...formData, project_url: e.target.value })}
-                                        className="w-full pl-10 pr-4 py-2 bg-gray-50 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm"
-                                        placeholder="프로젝트 링크 (선택사항)"
+                                        type="file"
+                                        ref={imageInputRef}
+                                        className="hidden"
+                                        accept="image/*"
+                                        onChange={(e) => handleFileUpload(e, 'image')}
+                                    />
+                                    <input
+                                        type="file"
+                                        ref={videoInputRef}
+                                        className="hidden"
+                                        accept="video/*"
+                                        onChange={(e) => handleFileUpload(e, 'video')}
                                     />
                                 </div>
                             </div>
+
+                            {/* Removed the separate Project URL input field */}
 
                             <div className="flex justify-end gap-3 pt-2">
                                 <button
                                     type="button"
                                     onClick={closeModal}
                                     className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg font-medium"
+                                    disabled={isUploading}
                                 >
                                     취소
                                 </button>
                                 <button
                                     type="submit"
-                                    className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+                                    className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-50"
+                                    disabled={isUploading}
                                 >
-                                    {editingId ? "수정하기" : "등록하기"}
+                                    {isUploading ? "업로드 중..." : (editingId ? "수정하기" : "등록하기")}
                                 </button>
                             </div>
                         </form>
