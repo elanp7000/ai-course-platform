@@ -103,8 +103,8 @@ export default function PortfolioPage() {
     };
 
     const getAuthorName = () => {
-        // User requested Login ID (email prefix) as the primary nickname
-        return currentUser?.email?.split('@')[0] || currentUser?.user_metadata?.full_name || '사용자';
+        // User requested Nickname (full_name) as the primary display name
+        return currentUser?.user_metadata?.full_name || currentUser?.email?.split('@')[0] || '사용자';
     };
 
     const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'video') => {

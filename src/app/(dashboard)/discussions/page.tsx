@@ -11,6 +11,7 @@ interface Discussion {
     created_at: string;
     author_id: string;
     author_email?: string;
+    author_name?: string;
 }
 
 export default function DiscussionsPage() {
@@ -59,6 +60,10 @@ export default function DiscussionsPage() {
         setIsLoading(false);
     };
 
+    const getAuthorName = () => {
+        return currentUser?.user_metadata?.full_name || currentUser?.email?.split('@')[0] || '사용자';
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!currentUser) return alert("로그인이 필요합니다.");
@@ -85,7 +90,8 @@ export default function DiscussionsPage() {
                         title: formData.title,
                         content: formData.content,
                         author_id: currentUser.id,
-                        author_email: currentUser.email
+                        author_email: currentUser.email,
+                        author_name: getAuthorName()
                     }]);
 
                 if (error) throw error;
@@ -134,7 +140,6 @@ export default function DiscussionsPage() {
         setFormData({ title: "", content: "" });
     };
 
-    // Helper to check permission
     const canManage = (item: Discussion) => {
         if (!currentUser) return false;
         return currentUser.id === item.author_id || isInstructor;
@@ -177,7 +182,9 @@ export default function DiscussionsPage() {
                                     <div>
                                         <h3 className="text-lg font-bold text-gray-900 mb-1">{item.title}</h3>
                                         <div className="flex items-center gap-2 text-sm text-gray-500">
-                                            <span>{item.author_email?.split('@')[0] || '익명'}</span>
+                                            <span className="font-semibold text-gray-800">
+                                                {item.author_name || item.author_email?.split('@')[0] || '익명'}
+                                            </span>
                                             <span>•</span>
                                             <span>{new Date(item.created_at).toLocaleDateString()}</span>
                                         </div>
