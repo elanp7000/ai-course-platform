@@ -110,7 +110,11 @@ export default function DashboardPage() {
 
     const isInstructor = userRole === 'instructor';
     const currentWeek = weeks.find(w => w.is_current);
-    const displayName = user?.email ? user.email.split('@')[0] + "님" : "학습자님";
+    const displayName = user?.user_metadata?.full_name
+        ? user.user_metadata.full_name + "님"
+        : user?.email
+            ? user.email.split('@')[0] + "님"
+            : "학습자님";
 
     return (
         <div className="space-y-10 pb-10">
