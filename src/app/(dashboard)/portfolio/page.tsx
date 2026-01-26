@@ -12,6 +12,7 @@ interface PortfolioItem {
     project_url: string;
     created_at: string;
     user_id: string;
+    author_name?: string;
 }
 
 export default function PortfolioPage() {
@@ -23,6 +24,9 @@ export default function PortfolioPage() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
     const [formData, setFormData] = useState({ title: "", description: "", project_url: "" });
+
+    // Detail Modal State
+    const [selectedItem, setSelectedItem] = useState<PortfolioItem | null>(null);
 
     // File Upload State
     const [isUploading, setIsUploading] = useState(false);
@@ -51,6 +55,15 @@ export default function PortfolioPage() {
         if (error) console.error("Error fetching portfolios:", error);
         else setItems(data || []);
         setIsLoading(false);
+    };
+
+    const extractFirstImage = (markdown: string) => {
+        const match = markdown.match(/!\[.*?\]\((.*?)\)/);
+        return match ? match[1] : null;
+    };
+
+    const getAuthorName = () => {
+        return currentUser?.user_metadata?.full_name || currentUser?.email?.split('@')[0] || '사용자';
     };
 
     const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'video') => {
@@ -109,10 +122,12 @@ export default function PortfolioPage() {
         if (!currentUser) return alert("로그인이 필요합니다.");
         if (!formData.description.trim()) return;
 
-        // Auto-generate title from description
+        // Auto-generate title from description (still useful for internal/admin, though not primary display)
         const generatedTitle = formData.description.length > 20
             ? formData.description.substring(0, 20) + "..."
             : formData.description;
+
+        const authorName = getAuthorName();
 
         try {
             if (editingId) {
@@ -122,7 +137,8 @@ export default function PortfolioPage() {
                     .update({
                         title: generatedTitle,
                         description: formData.description,
-                        project_url: formData.project_url
+                        project_url: formData.project_url,
+                        author_name: authorName
                     })
                     .eq('id', editingId);
 
@@ -136,7 +152,8 @@ export default function PortfolioPage() {
                         title: generatedTitle,
                         description: formData.description,
                         project_url: formData.project_url,
-                        user_id: currentUser.id
+                        user_id: currentUser.id,
+                        author_name: authorName
                     }]);
 
                 if (error) throw error;
@@ -151,7 +168,8 @@ export default function PortfolioPage() {
         }
     };
 
-    const handleDelete = async (id: string) => {
+    const handleDelete = async (e: React.MouseEvent, id: string) => {
+        e.stopPropagation(); // Prevent card click
         if (!confirm("정말 삭제하시겠습니까?")) return;
 
         const { error } = await supabase
@@ -173,7 +191,8 @@ export default function PortfolioPage() {
         setIsModalOpen(true);
     };
 
-    const openEditModal = (item: PortfolioItem) => {
+    const openEditModal = (e: React.MouseEvent, item: PortfolioItem) => {
+        e.stopPropagation(); // Prevent card click
         setEditingId(item.id);
         setFormData({
             title: item.title,
@@ -220,58 +239,71 @@ export default function PortfolioPage() {
                 </div>
             ) : (
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {items.map((item) => (
-                        <div key={item.id} className="bg-white rounded-xl border hover:shadow-lg transition-all group flex flex-col h-full">
-                            <div className="p-6 flex-1 flex flex-col">
-                                <div className="flex justify-between items-start mb-2">
-                                    <h3 className="text-xl font-bold text-gray-900 line-clamp-2">{item.title}</h3>
-                                    {isOwner(item) && (
-                                        <div className="flex gap-1 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <button
-                                                onClick={() => openEditModal(item)}
-                                                className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded"
-                                            >
-                                                <Pencil className="w-4 h-4" />
-                                            </button>
-                                            <button
-                                                onClick={() => handleDelete(item.id)}
-                                                className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                            </button>
+                    {items.map((item) => {
+                        const firstImage = extractFirstImage(item.description);
+                        return (
+                            <div
+                                key={item.id}
+                                onClick={() => setSelectedItem(item)}
+                                className="bg-white rounded-xl border hover:shadow-lg transition-all group flex flex-col h-full cursor-pointer overflow-hidden"
+                            >
+                                <div className="p-6 flex-1 flex flex-col">
+                                    <div className="flex justify-between items-start mb-4">
+                                        <div className="flex items-center gap-2">
+                                            <div className="bg-blue-100 p-1.5 rounded-full">
+                                                <User className="w-4 h-4 text-blue-600" />
+                                            </div>
+                                            <h3 className="text-lg font-bold text-gray-900">
+                                                {item.author_name || "익명 사용자"}
+                                            </h3>
                                         </div>
-                                    )}
-                                </div>
+                                        {isOwner(item) && (
+                                            <div className="flex gap-1 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <button
+                                                    onClick={(e) => openEditModal(e, item)}
+                                                    className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded"
+                                                >
+                                                    <Pencil className="w-4 h-4" />
+                                                </button>
+                                                <button
+                                                    onClick={(e) => handleDelete(e, item.id)}
+                                                    className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
 
-                                <div className="text-gray-500 text-sm mb-6 flex-1 line-clamp-4 text-ellipsis overflow-hidden break-words [&_img]:rounded-lg [&_img]:w-full [&_img]:object-cover [&_img]:max-h-60 [&_img]:my-2 [&_a]:text-blue-600 [&_a]:hover:underline">
-                                    <ReactMarkdown>
-                                        {item.description || "설명이 없습니다."}
-                                    </ReactMarkdown>
-                                </div>
+                                    {/* Image Preview or Text Snippet */}
+                                    <div className="flex-1 mb-4 h-48 bg-gray-50 rounded-lg overflow-hidden flex items-center justify-center">
+                                        {firstImage ? (
+                                            <img
+                                                src={firstImage}
+                                                alt="Project Preview"
+                                                className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                                            />
+                                        ) : (
+                                            <div className="text-gray-400 text-sm text-center p-4">
+                                                <User className="w-8 h-8 mx-auto mb-2 opacity-20" />
+                                                이미지가 없습니다.
+                                            </div>
+                                        )}
+                                    </div>
 
-                                <div className="pt-4 border-t flex items-center justify-between">
-                                    <span className="text-xs text-gray-400">
-                                        {new Date(item.created_at).toLocaleDateString()}
-                                    </span>
-                                    {item.project_url && (
-                                        <a
-                                            href={item.project_url}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="flex items-center gap-1 text-sm font-medium text-blue-600 hover:underline"
-                                        >
-                                            <Globe className="w-4 h-4" />
-                                            보러가기
-                                        </a>
-                                    )}
+                                    <div className="pt-4 border-t flex items-center justify-between">
+                                        <span className="text-xs text-gray-400">
+                                            {new Date(item.created_at).toLocaleDateString()}
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             )}
 
-            {/* Modal */}
+            {/* Create/Edit Modal */}
             {isModalOpen && (
                 <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
                     <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl animate-in fade-in zoom-in-95 duration-200">
@@ -293,7 +325,7 @@ export default function PortfolioPage() {
                                 <div>
                                     <p className="text-xs text-gray-500">작성자</p>
                                     <p className="font-medium text-gray-900">
-                                        {currentUser?.user_metadata?.full_name || currentUser?.email?.split('@')[0] || '사용자'}
+                                        {getAuthorName()}
                                     </p>
                                 </div>
                             </div>
@@ -373,6 +405,86 @@ export default function PortfolioPage() {
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Detail View Modal */}
+            {selectedItem && (
+                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setSelectedItem(null)}>
+                    <div
+                        className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        {/* Header */}
+                        <div className="flex justify-between items-center p-6 border-b">
+                            <div className="flex items-center gap-3">
+                                <div className="bg-blue-100 p-2 rounded-full">
+                                    <User className="w-6 h-6 text-blue-600" />
+                                </div>
+                                <div>
+                                    <h2 className="text-xl font-bold text-gray-900">
+                                        {selectedItem.author_name || "익명 사용자"}
+                                    </h2>
+                                    <p className="text-sm text-gray-500">
+                                        {new Date(selectedItem.created_at).toLocaleString()}
+                                    </p>
+                                </div>
+                            </div>
+                            <button onClick={() => setSelectedItem(null)} className="text-gray-400 hover:text-gray-600">
+                                <X className="w-6 h-6" />
+                            </button>
+                        </div>
+
+                        {/* Content */}
+                        <div className="p-6 overflow-y-auto custom-scrollbar">
+                            <div className="prose prose-blue max-w-none prose-img:rounded-xl prose-img:w-full prose-headings:font-bold prose-a:text-blue-600">
+                                <ReactMarkdown>
+                                    {selectedItem.description}
+                                </ReactMarkdown>
+                            </div>
+
+                            {/* External Link if exists */}
+                            {selectedItem.project_url && (
+                                <div className="mt-8 pt-4 border-t">
+                                    <a
+                                        href={selectedItem.project_url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors font-medium"
+                                    >
+                                        <Globe className="w-5 h-5" />
+                                        프로젝트 페이지 방문하기
+                                    </a>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Footer Actions (Only for owner) */}
+                        {isOwner(selectedItem) && (
+                            <div className="p-4 border-t bg-gray-50 rounded-b-2xl flex justify-end gap-2">
+                                <button
+                                    onClick={(e) => {
+                                        setSelectedItem(null);
+                                        openEditModal(e, selectedItem);
+                                    }}
+                                    className="px-4 py-2 text-gray-700 hover:bg-gray-200 rounded-lg font-medium flex items-center gap-2"
+                                >
+                                    <Pencil className="w-4 h-4" />
+                                    수정
+                                </button>
+                                <button
+                                    onClick={(e) => {
+                                        setSelectedItem(null);
+                                        handleDelete(e, selectedItem.id);
+                                    }}
+                                    className="px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg font-medium flex items-center gap-2"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                    삭제
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}
