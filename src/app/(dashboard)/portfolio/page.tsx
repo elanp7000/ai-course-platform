@@ -50,7 +50,12 @@ export default function PortfolioPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!currentUser) return alert("로그인이 필요합니다.");
-        if (!formData.title.trim()) return;
+        if (!formData.description.trim()) return;
+
+        // Auto-generate title from description
+        const generatedTitle = formData.description.length > 20
+            ? formData.description.substring(0, 20) + "..."
+            : formData.description;
 
         try {
             if (editingId) {
@@ -58,7 +63,7 @@ export default function PortfolioPage() {
                 const { error } = await supabase
                     .from('portfolios')
                     .update({
-                        title: formData.title,
+                        title: generatedTitle,
                         description: formData.description,
                         project_url: formData.project_url
                     })
@@ -71,7 +76,7 @@ export default function PortfolioPage() {
                 const { error } = await supabase
                     .from('portfolios')
                     .insert([{
-                        title: formData.title,
+                        title: generatedTitle,
                         description: formData.description,
                         project_url: formData.project_url,
                         user_id: currentUser.id
@@ -113,7 +118,12 @@ export default function PortfolioPage() {
 
     const openEditModal = (item: PortfolioItem) => {
         setEditingId(item.id);
-        setFormData({ title: item.title, description: item.description, project_url: item.project_url });
+        // We use description as the main content now
+        setFormData({
+            title: item.title,
+            description: item.description,
+            project_url: item.project_url
+        });
         setIsModalOpen(true);
     };
 
@@ -131,7 +141,7 @@ export default function PortfolioPage() {
         <div className="max-w-6xl mx-auto pb-20">
             <div className="flex items-center justify-between mb-8">
                 <div>
-                    <h1 className="text-3xl font-bold text-gray-900">내 포트폴리오</h1>
+                    <h1 className="text-3xl font-bold text-gray-900">실습 과제</h1>
                     <p className="text-gray-500 mt-2">학습한 결과물을 공유하고 서로 피드백을 주고받으세요.</p>
                 </div>
                 <button
@@ -150,7 +160,7 @@ export default function PortfolioPage() {
             ) : items.length === 0 ? (
                 <div className="bg-white rounded-xl border border-dashed p-12 text-center text-gray-500">
                     <User className="w-10 h-10 mx-auto mb-4 text-gray-300" />
-                    등록된 프로젝트가 없습니다. 나의 포트폴리오를 만들어보세요!
+                    등록된 프로젝트가 없습니다. + 프로젝트 추가를 눌러 만들어보세요!
                 </div>
             ) : (
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -216,38 +226,60 @@ export default function PortfolioPage() {
                                 <X className="w-6 h-6" />
                             </button>
                         </div>
+
                         <form onSubmit={handleSubmit} className="p-6 space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">프로젝트 제목</label>
-                                <input
-                                    type="text"
-                                    value={formData.title}
-                                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                                    placeholder="프로젝트명을 입력하세요"
-                                    required
-                                />
+                            {/* User Info (Read-only) */}
+                            <div className="flex items-center gap-3 bg-gray-50 p-3 rounded-lg">
+                                <div className="bg-blue-100 p-2 rounded-full">
+                                    <User className="w-5 h-5 text-blue-600" />
+                                </div>
+                                <div>
+                                    <p className="text-xs text-gray-500">작성자</p>
+                                    <p className="font-medium text-gray-900">
+                                        {currentUser?.user_metadata?.full_name || currentUser?.email?.split('@')[0] || '사용자'}
+                                    </p>
+                                </div>
                             </div>
+
+                            {/* Simplified Content Input */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">소개 / 설명</label>
                                 <textarea
                                     value={formData.description}
                                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                    className="w-full h-32 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none"
-                                    placeholder="어떤 프로젝트인지 설명해주세요"
+                                    className="w-full h-40 p-4 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none text-base"
+                                    placeholder="프로젝트에 대해 설명해주세요..."
+                                    required
                                 />
+
+                                {/* Media Placeholders */}
+                                <div className="flex gap-2 mt-2">
+                                    <button type="button" className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="사진 추가">
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                    </button>
+                                    <button type="button" className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="동영상 추가">
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                                    </button>
+                                    <button type="button" className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="링크 추가">
+                                        <Globe className="w-5 h-5" />
+                                    </button>
+                                </div>
                             </div>
+
+                            {/* Project URL (Optional) */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">프로젝트 링크 (URL)</label>
-                                <input
-                                    type="url"
-                                    value={formData.project_url}
-                                    onChange={(e) => setFormData({ ...formData, project_url: e.target.value })}
-                                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                                    placeholder="https://..."
-                                />
+                                <div className="relative">
+                                    <Globe className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+                                    <input
+                                        type="url"
+                                        value={formData.project_url}
+                                        onChange={(e) => setFormData({ ...formData, project_url: e.target.value })}
+                                        className="w-full pl-10 pr-4 py-2 bg-gray-50 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm"
+                                        placeholder="프로젝트 링크 (선택사항)"
+                                    />
+                                </div>
                             </div>
-                            <div className="flex justify-end gap-3 pt-4">
+
+                            <div className="flex justify-end gap-3 pt-2">
                                 <button
                                     type="button"
                                     onClick={closeModal}
