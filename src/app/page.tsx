@@ -4,7 +4,28 @@
 import Link from "next/link";
 import { ArrowRight, BookOpen, CheckCircle, Sparkles, Star, Users, Zap } from "lucide-react";
 
+import { useEffect, useState } from "react";
+import { supabase } from "@/utils/supabase/client";
+
 export default function LandingPage() {
+    const [user, setUser] = useState<any>(null);
+
+    useEffect(() => {
+        const getUser = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            setUser(session?.user ?? null);
+        };
+        getUser();
+
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            setUser(session?.user ?? null);
+        });
+
+        return () => subscription.unsubscribe();
+    }, []);
+
+    const displayName = user?.user_metadata?.full_name || user?.email?.split('@')[0];
+
     return (
         <div className="min-h-screen bg-slate-900 text-white selection:bg-blue-500 selection:text-white">
             {/* Header / Nav */}
@@ -17,9 +38,16 @@ export default function LandingPage() {
                         <span className="font-bold text-xl tracking-tight">AI Course</span>
                     </Link>
                     <div className="flex items-center gap-4">
-                        <Link href="/login?mode=signup" className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-full text-sm font-medium transition-all shadow-lg shadow-blue-500/20">
-                            시작하기
-                        </Link>
+                        {user ? (
+                            <Link href="/dashboard" className="text-blue-300 hover:text-white transition-colors text-sm font-medium flex items-center gap-2">
+                                <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                                {displayName}님
+                            </Link>
+                        ) : (
+                            <Link href="/login?mode=signup" className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-full text-sm font-medium transition-all shadow-lg shadow-blue-500/20">
+                                시작하기
+                            </Link>
+                        )}
                     </div>
                 </div>
             </header>
