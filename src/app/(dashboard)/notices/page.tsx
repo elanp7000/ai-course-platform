@@ -246,43 +246,81 @@ export default function NoticesPage() {
                                 />
                             </div>
 
-                            {/* Image Upload */}
+                            {/* Image Upload Area */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">이미지 첨부 (여러 장 가능)</label>
-                                <div className="border border-dashed rounded-lg p-4 bg-gray-50">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">이미지 첨부</label>
+
+                                {/* Upload Dropzone */}
+                                <div className="relative group">
                                     <input
                                         type="file"
                                         multiple
                                         accept="image/*"
-                                        onChange={(e) => setSelectedFiles(e.target.files)}
-                                        className="w-full"
+                                        onChange={(e) => {
+                                            if (e.target.files && e.target.files.length > 0) {
+                                                // Append new files to existing selection if possible, or just replace. 
+                                                // For simplicity in standard inputs, we usually replace, but let's try to simulate 'adding' if we want robust UX, 
+                                                // but standard file input replacement is safer for now unless we manage a custom array of Files.
+                                                // Let's stick to standard behavior but style it better.
+                                                setSelectedFiles(e.target.files);
+                                            }
+                                        }}
+                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                                     />
-                                    <p className="text-xs text-gray-500 mt-2">
-                                        첨부된 파일: {selectedFiles ? `${selectedFiles.length}개 파일 선택됨` : "선택된 파일 없음"}
-                                    </p>
+                                    <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 flex flex-col items-center justify-center bg-gray-50 group-hover:bg-blue-50 group-hover:border-blue-400 transition-all text-gray-400 group-hover:text-blue-500">
+                                        <div className="p-3 bg-white rounded-full shadow-sm mb-3 group-hover:scale-110 transition-transform">
+                                            <ImageIcon className="w-8 h-8" />
+                                        </div>
+                                        <p className="font-semibold text-sm">
+                                            클릭하여 이미지 업로드
+                                        </p>
+                                        <p className="text-xs text-gray-400 mt-1">
+                                            또는 파일을 여기로 드래그하세요
+                                        </p>
+                                    </div>
                                 </div>
-                            </div>
 
-                            {/* Existing Images Preview (Edit Mode) */}
-                            {existingImages.length > 0 && (
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">기존 이미지</label>
-                                    <div className="flex gap-2 overflow-x-auto pb-2">
+                                {/* Selected Files & Existing Images Preview */}
+                                {(selectedFiles || existingImages.length > 0) && (
+                                    <div className="mt-4 grid grid-cols-4 gap-2">
+                                        {/* Existing Images */}
                                         {existingImages.map((src, idx) => (
-                                            <div key={idx} className="relative flex-shrink-0 w-24 h-24 rounded-lg overflow-hidden border group">
-                                                <img src={src} alt={`img-${idx}`} className="w-full h-full object-cover" />
+                                            <div key={`exist-${idx}`} className="relative aspect-square rounded-lg overflow-hidden border group">
+                                                <img src={src} alt={`existing-${idx}`} className="w-full h-full object-cover" />
                                                 <button
                                                     type="button"
                                                     onClick={() => removeExistingImage(idx)}
-                                                    className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                    className="absolute top-1 right-1 bg-red-500/80 hover:bg-red-600 text-white rounded-full p-1 opacity-100 transition-all shadow-sm"
                                                 >
                                                     <X className="w-3 h-3" />
                                                 </button>
+                                                <div className="absolute bottom-0 inset-x-0 bg-black/50 text-white text-[10px] px-1 py-0.5 text-center truncate">
+                                                    기존 이미지
+                                                </div>
+                                            </div>
+                                        ))}
+
+                                        {/* New Files Preview */}
+                                        {selectedFiles && Array.from(selectedFiles).map((file, idx) => (
+                                            <div key={`new-${idx}`} className="relative aspect-square rounded-lg overflow-hidden border bg-gray-100">
+                                                {/* We can create object URL for preview */}
+                                                <img
+                                                    src={URL.createObjectURL(file)}
+                                                    alt="preview"
+                                                    className="w-full h-full object-cover opacity-80"
+                                                    onLoad={(e) => URL.revokeObjectURL((e.target as HTMLImageElement).src)}
+                                                />
+                                                <div className="absolute top-1 right-1 bg-blue-500 text-white rounded-full p-1 shadow-sm">
+                                                    <Plus className="w-3 h-3 rotate-45" /> {/* Use as fake remove icon or just indicator */}
+                                                </div>
+                                                <div className="absolute bottom-0 inset-x-0 bg-blue-600/80 text-white text-[10px] px-1 py-0.5 text-center truncate">
+                                                    새 파일
+                                                </div>
                                             </div>
                                         ))}
                                     </div>
-                                </div>
-                            )}
+                                )}
+                            </div>
 
                             <div className="flex justify-end gap-3 pt-4 border-t">
                                 <button
