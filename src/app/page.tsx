@@ -53,10 +53,6 @@ export default function LandingPage() {
                     </p>
 
                     <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                        <Link href="/dashboard" className="w-full sm:w-auto px-8 py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-full font-bold text-lg transition-all shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2 group">
-                            무료로 시작하기
-                            <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                        </Link>
                         <Link href="#features" className="w-full sm:w-auto px-8 py-4 bg-white/5 hover:bg-white/10 text-white border border-white/10 rounded-full font-bold text-lg transition-all flex items-center justify-center">
                             커리큘럼 보기
                         </Link>
@@ -66,7 +62,7 @@ export default function LandingPage() {
                     <div className="mt-20 pt-10 border-t border-white/5 grid grid-cols-2 md:grid-cols-4 gap-8 max-w-4xl mx-auto">
                         {[
                             { label: "수강생", value: "1,200+" },
-                            { label: "강의 만족도", value: "4.9/5" },
+                            { label: "강의 만족도", value: "5/5" },
                             { label: "실습 프로젝트", value: "15+" },
                             { label: "커뮤니티 멤버", value: "3,000+" },
                         ].map((stat, i) => (
