@@ -4,12 +4,12 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/utils/supabase/client";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, BookOpen, CheckCircle, Circle, FileText, PlayCircle, Lock, Plus, Trash2, X } from "lucide-react";
+import { ArrowLeft, BookOpen, CheckCircle, Circle, FileText, PlayCircle, Plus, Trash2, X, Image as ImageIcon } from "lucide-react";
 
 type Material = {
     id: string;
     title: string;
-    type: 'video' | 'text' | 'pdf' | 'link';
+    type: 'video' | 'text' | 'pdf' | 'link' | 'image';
     content_url?: string;
     description?: string;
 };
@@ -36,6 +36,10 @@ export default function WeekDetailPage() {
     const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
     const [newMaterial, setNewMaterial] = useState({ title: '', type: 'link', description: '', content_url: '' });
 
+    // File Upload State
+    const [file, setFile] = useState<File | null>(null);
+    const [isUploading, setIsUploading] = useState(false);
+
     useEffect(() => {
         const fetchData = async () => {
             setLoading(true);
@@ -53,7 +57,7 @@ export default function WeekDetailPage() {
 
                 setIsInstructor(userData?.role === 'instructor');
 
-                // Fetch Progress (Student only usually, but good for testing)
+                // Fetch Progress
                 const { data: progressData } = await supabase
                     .from('user_progress')
                     .select('material_id')
@@ -91,7 +95,8 @@ export default function WeekDetailPage() {
             if (materialsError) {
                 console.error("Error fetching materials:", materialsError);
             } else {
-                setMaterials(materialsData || []);
+                // Cast type forcibly if needed or rely on loose matching
+                setMaterials((materialsData as any[]) || []);
             }
 
             setLoading(false);
@@ -107,14 +112,11 @@ export default function WeekDetailPage() {
         }
 
         const newIsCompleted = !progress.has(materialId);
-
-        // Optimistic UI Update
         const newProgress = new Set(progress);
         if (newIsCompleted) newProgress.add(materialId);
         else newProgress.delete(materialId);
         setProgress(newProgress);
 
-        // DB Update
         const { error } = await supabase.from('user_progress').upsert({
             user_id: user.id,
             material_id: materialId,
@@ -124,51 +126,78 @@ export default function WeekDetailPage() {
 
         if (error) {
             console.error("Failed to update progress", error);
-            // Revert on error
             if (newIsCompleted) newProgress.delete(materialId);
             else newProgress.add(materialId);
             setProgress(new Set(newProgress));
         }
     };
 
+    const uploadFile = async (file: File) => {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+        const filePath = `${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+            .from('lecture_materials')
+            .upload(filePath, file);
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+            .from('lecture_materials')
+            .getPublicUrl(filePath);
+
+        return publicUrl;
+    };
+
     const handleSaveMaterial = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!week) return;
 
-        if (editingMaterial) {
-            // Update Mode
-            const { error } = await supabase.from('materials').update({
-                title: newMaterial.title,
-                type: newMaterial.type,
-                description: newMaterial.description,
-                content_url: newMaterial.content_url
-            }).eq('id', editingMaterial.id);
+        setIsUploading(true);
+        let finalContentUrl = newMaterial.content_url;
 
-            if (error) {
-                alert("수정 실패: " + error.message);
+        try {
+            if (file) {
+                finalContentUrl = await uploadFile(file);
+            }
+
+            if (editingMaterial) {
+                // Update
+                const { error } = await supabase.from('materials').update({
+                    title: newMaterial.title,
+                    type: newMaterial.type,
+                    description: newMaterial.description,
+                    content_url: finalContentUrl
+                }).eq('id', editingMaterial.id);
+
+                if (error) throw error;
+
+                setMaterials(materials.map(m => m.id === editingMaterial.id ? { ...m, ...newMaterial, content_url: finalContentUrl } as Material : m));
             } else {
-                setMaterials(materials.map(m => m.id === editingMaterial.id ? { ...m, ...newMaterial } as Material : m));
-                setIsAdding(false);
-                setEditingMaterial(null);
-                setNewMaterial({ title: '', type: 'link', description: '', content_url: '' });
-            }
-        } else {
-            // Create Mode
-            const { data, error } = await supabase.from('materials').insert({
-                week_id: week.id,
-                title: newMaterial.title,
-                type: newMaterial.type as any,
-                description: newMaterial.description,
-                content_url: newMaterial.content_url
-            }).select().single();
+                // Create
+                const { data, error } = await supabase.from('materials').insert({
+                    week_id: week.id,
+                    title: newMaterial.title,
+                    type: newMaterial.type as any,
+                    description: newMaterial.description,
+                    content_url: finalContentUrl
+                }).select().single();
 
-            if (error) {
-                alert("저장 실패: " + error.message);
-            } else if (data) {
-                setMaterials([...materials, data]);
-                setIsAdding(false);
-                setNewMaterial({ title: '', type: 'link', description: '', content_url: '' });
+                if (error) throw error;
+                if (data) setMaterials([...materials, data]);
             }
+
+            // Reset
+            setIsAdding(false);
+            setEditingMaterial(null);
+            setNewMaterial({ title: '', type: 'link', description: '', content_url: '' });
+            setFile(null);
+        } catch (error: any) {
+            console.error("Save Error:", error);
+            alert("저장 실패: " + error.message);
+        } finally {
+            setIsUploading(false);
         }
     };
 
@@ -180,6 +209,7 @@ export default function WeekDetailPage() {
             description: material.description || '',
             content_url: material.content_url || ''
         });
+        setFile(null);
         setIsAdding(true);
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
@@ -280,6 +310,7 @@ export default function WeekDetailPage() {
                             setIsAdding(false);
                             setEditingMaterial(null);
                             setNewMaterial({ title: '', type: 'link', description: '', content_url: '' });
+                            setFile(null);
                         }} className="text-gray-400 hover:text-gray-600">
                             <X className="w-5 h-5" />
                         </button>
@@ -307,19 +338,36 @@ export default function WeekDetailPage() {
                                     <option value="video">영상 (Video)</option>
                                     <option value="link">링크 (Link)</option>
                                     <option value="pdf">PDF 파일</option>
+                                    <option value="image">이미지 (Image)</option>
                                     <option value="text">텍스트/글</option>
                                 </select>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">링크 주소 (URL)</label>
-                                <input
-                                    type="url"
-                                    required
-                                    className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                                    value={newMaterial.content_url}
-                                    onChange={e => setNewMaterial({ ...newMaterial, content_url: e.target.value })}
-                                    placeholder="https://..."
-                                />
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    {['pdf', 'image', 'video'].includes(newMaterial.type) ? '파일 첨부' : '링크 주소 (URL)'}
+                                </label>
+
+                                {['pdf', 'image', 'video'].includes(newMaterial.type) ? (
+                                    <input
+                                        type="file"
+                                        accept={
+                                            newMaterial.type === 'pdf' ? '.pdf' :
+                                                newMaterial.type === 'image' ? 'image/*' :
+                                                    'video/*'
+                                        }
+                                        onChange={e => setFile(e.target.files?.[0] || null)}
+                                        className="w-full p-1.5 border rounded-lg"
+                                    />
+                                ) : (
+                                    <input
+                                        type="url"
+                                        required={newMaterial.type === 'link'}
+                                        className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                                        value={newMaterial.content_url}
+                                        onChange={e => setNewMaterial({ ...newMaterial, content_url: e.target.value })}
+                                        placeholder="https://..."
+                                    />
+                                )}
                             </div>
                         </div>
                         <div>
@@ -334,7 +382,9 @@ export default function WeekDetailPage() {
                         </div>
                         <div className="flex justify-end gap-2 pt-2">
                             <button type="button" onClick={() => setIsAdding(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">취소</button>
-                            <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">등록하기</button>
+                            <button type="submit" disabled={isUploading} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
+                                {isUploading ? "업로드 중..." : "등록하기"}
+                            </button>
                         </div>
                     </form>
                 </div>
@@ -356,94 +406,86 @@ export default function WeekDetailPage() {
                 <div className="grid gap-4">
                     {materials.map((material) => {
                         const isCompleted = progress.has(material.id);
-                        const Icon = material.type === 'video' ? PlayCircle : FileText;
+                        let Icon = FileText;
+                        if (material.type === 'video') Icon = PlayCircle;
+                        if (material.type === 'image') Icon = ImageIcon;
+                        if (material.type === 'pdf') Icon = FileText;
 
                         return (
                             <div
                                 key={material.id}
-                                className={`group bg-white rounded-xl border p-6 transition-all ${isCompleted ? "border-green-200 bg-green-50/30" : "hover:border-blue-300 hover:shadow-md"
-                                    }`}
+                                className={`group bg-white rounded-xl border p-6 transition-all ${isCompleted ? "border-green-200 bg-green-50/30" : "hover:border-blue-300 hover:shadow-md"}`}
                             >
                                 <div className="flex items-start gap-4">
-                                    <div className={`p-3 rounded-lg ${isCompleted ? "bg-green-100 text-green-600" : "bg-blue-50 text-blue-600"
-                                        }`}>
+                                    <div className={`p-3 rounded-lg ${isCompleted ? "bg-green-100 text-green-600" : "bg-blue-50 text-blue-600"}`}>
                                         <Icon className="w-6 h-6" />
                                     </div>
 
                                     <div className="flex-1">
                                         <div className="flex justify-between items-start">
-                                            <h3 className={`text-lg font-bold mb-1 group-hover:text-blue-700 transition-colors ${isCompleted ? "text-gray-800" : "text-gray-900"
-                                                }`}>
+                                            <h3 className={`text-lg font-bold mb-1 group-hover:text-blue-700 transition-colors ${isCompleted ? "text-gray-800" : "text-gray-900"}`}>
                                                 {material.title}
                                             </h3>
 
                                             {isInstructor ? (
                                                 <div className="flex items-center gap-2">
-                                                    <button
-                                                        onClick={() => handleEditClick(material)}
-                                                        className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded"
-                                                        title="재료 수정"
-                                                    >
-                                                        <FileText className="w-5 h-5" />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleDeleteMaterial(material.id)}
-                                                        className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"
-                                                        title="재료 삭제"
-                                                    >
-                                                        <Trash2 className="w-5 h-5" />
-                                                    </button>
+                                                    <button onClick={() => handleEditClick(material)} className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded"><FileText className="w-5 h-5" /></button>
+                                                    <button onClick={() => handleDeleteMaterial(material.id)} className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"><Trash2 className="w-5 h-5" /></button>
                                                 </div>
                                             ) : (
-                                                <button
-                                                    onClick={() => toggleProgress(material.id)}
-                                                    className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${isCompleted
-                                                        ? "bg-green-100 text-green-700 hover:bg-green-200"
-                                                        : "bg-gray-100 text-gray-500 hover:bg-gray-200"
-                                                        }`}
-                                                >
-                                                    {isCompleted ? (
-                                                        <>
-                                                            <CheckCircle className="w-4 h-4" />
-                                                            완료됨
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <Circle className="w-4 h-4" />
-                                                            완료 표시
-                                                        </>
-                                                    )}
+                                                <button onClick={() => toggleProgress(material.id)} className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${isCompleted ? "bg-green-100 text-green-700 hover:bg-green-200" : "bg-gray-100 text-gray-500 hover:bg-gray-200"}`}>
+                                                    {isCompleted ? <><CheckCircle className="w-4 h-4" />완료됨</> : <><Circle className="w-4 h-4" />완료 표시</>}
                                                 </button>
                                             )}
                                         </div>
-                                        <p className="text-gray-500 text-sm mb-4">
-                                            {material.description}
-                                        </p>
 
-                                        <div className="flex gap-2">
-                                            {material.content_url && material.content_url !== '#' ? (
-                                                <a
-                                                    href={material.content_url}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors inline-block text-center"
-                                                >
-                                                    학습하기
-                                                </a>
-                                            ) : (
-                                                <button
-                                                    onClick={() => alert("준비 중인 자료입니다.")}
-                                                    className="px-4 py-2 bg-gray-200 text-gray-500 text-sm font-medium rounded-lg cursor-not-allowed"
-                                                >
-                                                    준비 중
-                                                </button>
+                                        <p className="text-gray-500 text-sm mb-4">{material.description}</p>
+
+                                        {/* Content Render Logic */}
+                                        <div className="space-y-4">
+                                            {/* Video Player */}
+                                            {material.type === 'video' && material.content_url && (
+                                                <div className="rounded-xl overflow-hidden bg-black aspect-video relative group/video">
+                                                    <video
+                                                        src={material.content_url}
+                                                        className="w-full h-full"
+                                                        controls
+                                                        preload="metadata"
+                                                    />
+                                                </div>
                                             )}
 
-                                            {material.type === 'video' && (
-                                                <span className="px-3 py-2 bg-gray-100 text-gray-500 text-xs font-medium rounded-lg flex items-center">
-                                                    15:00
-                                                </span>
+                                            {/* Image Preview */}
+                                            {material.type === 'image' && material.content_url && (
+                                                <img
+                                                    src={material.content_url}
+                                                    alt={material.title}
+                                                    className="rounded-xl max-h-96 object-cover w-full border"
+                                                />
                                             )}
+
+                                            {/* PDF / Link / Text Action */}
+                                            <div className="flex gap-2">
+                                                {material.content_url && material.content_url !== '#' && (
+                                                    <a
+                                                        href={material.content_url}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors inline-flex items-center gap-2 ${material.type === 'pdf'
+                                                                ? "bg-red-50 text-red-600 hover:bg-red-100 border border-red-200"
+                                                                : "bg-blue-600 text-white hover:bg-blue-700"
+                                                            }`}
+                                                    >
+                                                        {material.type === 'pdf' ? <FileText className="w-4 h-4" /> : <BookOpen className="w-4 h-4" />}
+                                                        {material.type === 'pdf' ? "PDF 보기/다운로드" : "학습하기"}
+                                                    </a>
+                                                )}
+
+                                                {/* Fallback for Text with no URL */}
+                                                {!material.content_url && material.type === 'text' && (
+                                                    <div className="text-sm text-gray-500 italic">내용을 참조하세요.</div>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
