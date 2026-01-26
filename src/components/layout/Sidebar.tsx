@@ -4,7 +4,7 @@ import { BookOpen, Home, List, MessageCircle, Settings, User } from "lucide-reac
 export function Sidebar() {
     return (
         <aside className="w-64 bg-white border-r h-full flex flex-col hidden md:flex">
-            <Link href="/" className="p-6 border-b flex items-center gap-2 hover:bg-gray-50 transition-colors">
+            <Link href="/" className="h-16 px-6 border-b flex items-center gap-2 hover:bg-gray-50 transition-colors">
                 <BookOpen className="w-6 h-6 text-blue-600" />
                 <span className="font-bold text-xl text-gray-800">AI Course</span>
             </Link>

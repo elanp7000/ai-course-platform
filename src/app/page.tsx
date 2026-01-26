@@ -74,7 +74,7 @@ export default function LandingPage() {
                     </h1>
 
                     <p className="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed">
-                        ChatGPT부터 Midjourney까지. <br className="md:hidden" /> 실무에 즉시 적용 가능한 AI 기술을 체계적인 커리큘럼으로 배워보세요.
+                        실무에 즉시 적용 가능한 <br className="md:hidden" />  AI 기술을 체계적인 커리큘럼으로 배워보세요.
                     </p>
 
                     <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
