@@ -361,7 +361,7 @@ function NoticeItem({ notice, isInstructor, onEdit, onDelete }: { notice: Notice
     };
 
     return (
-        <div className="bg-white rounded-xl border p-6 hover:shadow-md transition-shadow">
+        <div className="bg-white rounded-xl border p-6 hover:shadow-md transition-shadow overflow-hidden">
             <div className="flex justify-between items-start mb-4">
                 <div>
                     <h3 className="text-xl font-bold text-gray-900 mb-1">{notice.title}</h3>
@@ -383,7 +383,7 @@ function NoticeItem({ notice, isInstructor, onEdit, onDelete }: { notice: Notice
 
             {/* Image Carousel */}
             {hasImages && (
-                <div className="relative mb-6 bg-gray-50 rounded-xl overflow-hidden border border-gray-100 shadow-sm group/image">
+                <div className="relative -mx-6 mb-6 group/image bg-gray-50 border-y border-gray-100">
                     <img
                         src={notice.images![currentImageIndex]}
                         alt={`Notice image ${currentImageIndex + 1}`}
