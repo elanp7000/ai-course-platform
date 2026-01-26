@@ -96,7 +96,7 @@ export default function PortfolioPage() {
         img: ({ node, ...props }: any) => (
             <img
                 {...props}
-                className="rounded-xl w-full object-cover my-4 max-h-[500px] shadow-sm"
+                className="rounded-xl w-full h-auto my-4 shadow-sm"
                 loading="lazy"
             />
         )
