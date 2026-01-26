@@ -235,16 +235,6 @@ export default function NoticesPage() {
                                     required
                                 />
                             </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">내용</label>
-                                <textarea
-                                    value={formData.content}
-                                    onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                                    className="w-full h-40 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-none"
-                                    placeholder="내용을 입력하세요"
-                                    required
-                                />
-                            </div>
 
                             {/* Image Upload Area */}
                             <div>
@@ -258,10 +248,6 @@ export default function NoticesPage() {
                                         accept="image/*"
                                         onChange={(e) => {
                                             if (e.target.files && e.target.files.length > 0) {
-                                                // Append new files to existing selection if possible, or just replace. 
-                                                // For simplicity in standard inputs, we usually replace, but let's try to simulate 'adding' if we want robust UX, 
-                                                // but standard file input replacement is safer for now unless we manage a custom array of Files.
-                                                // Let's stick to standard behavior but style it better.
                                                 setSelectedFiles(e.target.files);
                                             }
                                         }}
@@ -320,6 +306,17 @@ export default function NoticesPage() {
                                         ))}
                                     </div>
                                 )}
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">내용</label>
+                                <textarea
+                                    value={formData.content}
+                                    onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+                                    className="w-full h-40 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-none"
+                                    placeholder="내용을 입력하세요"
+                                    required
+                                />
                             </div>
 
                             <div className="flex justify-end gap-3 pt-4 border-t">
