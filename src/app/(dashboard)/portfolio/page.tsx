@@ -63,7 +63,8 @@ export default function PortfolioPage() {
     };
 
     const getAuthorName = () => {
-        return currentUser?.user_metadata?.full_name || currentUser?.email?.split('@')[0] || '사용자';
+        // User requested Login ID (email prefix) as the primary nickname
+        return currentUser?.email?.split('@')[0] || currentUser?.user_metadata?.full_name || '사용자';
     };
 
     const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'video') => {
@@ -122,7 +123,7 @@ export default function PortfolioPage() {
         if (!currentUser) return alert("로그인이 필요합니다.");
         if (!formData.description.trim()) return;
 
-        // Auto-generate title from description (still useful for internal/admin, though not primary display)
+        // Auto-generate title from description
         const generatedTitle = formData.description.length > 20
             ? formData.description.substring(0, 20) + "..."
             : formData.description;
@@ -276,7 +277,7 @@ export default function PortfolioPage() {
                                     </div>
 
                                     {/* Image Preview or Text Snippet */}
-                                    <div className="flex-1 mb-4 h-48 bg-gray-50 rounded-lg overflow-hidden flex items-center justify-center">
+                                    <div className="flex-1 mb-4 h-48 bg-gray-50 rounded-lg overflow-hidden relative">
                                         {firstImage ? (
                                             <img
                                                 src={firstImage}
@@ -284,9 +285,10 @@ export default function PortfolioPage() {
                                                 className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
                                             />
                                         ) : (
-                                            <div className="text-gray-400 text-sm text-center p-4">
-                                                <User className="w-8 h-8 mx-auto mb-2 opacity-20" />
-                                                이미지가 없습니다.
+                                            <div className="w-full h-full p-4 overflow-hidden text-sm text-gray-500 prose-sm prose-p:my-0">
+                                                <div className="line-clamp-[8] break-words whitespace-pre-wrap">
+                                                    {item.description}
+                                                </div>
                                             </div>
                                         )}
                                     </div>
