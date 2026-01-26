@@ -57,9 +57,49 @@ export default function PortfolioPage() {
         setIsLoading(false);
     };
 
-    const extractFirstImage = (markdown: string) => {
-        const match = markdown.match(/!\[.*?\]\((.*?)\)/);
-        return match ? match[1] : null;
+    const extractFirstMedia = (markdown: string): { type: 'image' | 'video', url: string } | null => {
+        // Check for Image
+        const imageMatch = markdown.match(/!\[.*?\]\((.*?)\)/);
+        if (imageMatch) return { type: 'image', url: imageMatch[1] };
+
+        // Check for Video (simple link check)
+        // Regex to find [text](url) where url ends in video extension
+        const videoMatch = markdown.match(/\[.*?\]\((.*?\.(?:mp4|webm|ogg|mov))\)/i);
+        if (videoMatch) return { type: 'video', url: videoMatch[1] };
+
+        return null;
+    };
+
+    const MarkdownComponents = {
+        a: ({ node, ...props }: any) => {
+            const { href, children } = props;
+            if (href?.match(/\.(mp4|webm|ogg|mov)$/i)) {
+                return (
+                    <video controls className="w-full rounded-xl my-4 max-h-[500px] bg-black" preload="metadata">
+                        <source src={href} />
+                        동영상을 재생할 수 없습니다.
+                    </video>
+                );
+            }
+            return (
+                <a
+                    {...props}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline inline-flex items-center gap-1"
+                >
+                    <Globe className="w-4 h-4 inline" />
+                    {children}
+                </a>
+            );
+        },
+        img: ({ node, ...props }: any) => (
+            <img
+                {...props}
+                className="rounded-xl w-full object-cover my-4 max-h-[500px] shadow-sm"
+                loading="lazy"
+            />
+        )
     };
 
     const getAuthorName = () => {
@@ -241,7 +281,7 @@ export default function PortfolioPage() {
             ) : (
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {items.map((item) => {
-                        const firstImage = extractFirstImage(item.description);
+                        const firstMedia = extractFirstMedia(item.description);
                         return (
                             <div
                                 key={item.id}
@@ -276,19 +316,35 @@ export default function PortfolioPage() {
                                         )}
                                     </div>
 
-                                    {/* Image Preview or Text Snippet */}
-                                    <div className="flex-1 mb-4 h-48 bg-gray-50 rounded-lg overflow-hidden relative">
-                                        {firstImage ? (
-                                            <img
-                                                src={firstImage}
-                                                alt="Project Preview"
-                                                className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-                                            />
+                                    {/* Media Preview (Image or Video) or Text Snippet */}
+                                    <div className="flex-1 mb-4 h-48 bg-gray-50 rounded-lg overflow-hidden relative flex items-center justify-center">
+                                        {firstMedia ? (
+                                            firstMedia.type === 'video' ? (
+                                                <video
+                                                    src={firstMedia.url}
+                                                    className="w-full h-full object-cover"
+                                                    muted // Mute for preview
+                                                    onMouseOver={e => (e.target as HTMLVideoElement).play()}
+                                                    onMouseOut={e => (e.target as HTMLVideoElement).pause()}
+                                                />
+                                            ) : (
+                                                <img
+                                                    src={firstMedia.url}
+                                                    alt="Project Preview"
+                                                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                                                />
+                                            )
                                         ) : (
                                             <div className="w-full h-full p-4 overflow-hidden text-sm text-gray-500 prose-sm prose-p:my-0">
                                                 <div className="line-clamp-[8] break-words whitespace-pre-wrap">
                                                     {item.description}
                                                 </div>
+                                            </div>
+                                        )}
+                                        {/* Video Indicator Icon */}
+                                        {firstMedia?.type === 'video' && (
+                                            <div className="absolute top-2 right-2 bg-black/50 text-white p-1.5 rounded-full">
+                                                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
                                             </div>
                                         )}
                                     </div>
@@ -441,7 +497,7 @@ export default function PortfolioPage() {
                         {/* Content */}
                         <div className="p-6 overflow-y-auto custom-scrollbar">
                             <div className="prose prose-blue max-w-none prose-img:rounded-xl prose-img:w-full prose-headings:font-bold prose-a:text-blue-600">
-                                <ReactMarkdown>
+                                <ReactMarkdown components={MarkdownComponents}>
                                     {selectedItem.description}
                                 </ReactMarkdown>
                             </div>
