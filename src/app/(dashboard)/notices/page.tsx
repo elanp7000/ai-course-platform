@@ -383,11 +383,11 @@ function NoticeItem({ notice, isInstructor, onEdit, onDelete }: { notice: Notice
 
             {/* Image Carousel */}
             {hasImages && (
-                <div className="relative mb-6 bg-gray-50 rounded-xl overflow-hidden border border-gray-100 shadow-sm aspect-video group/image">
+                <div className="relative mb-6 bg-gray-50 rounded-xl overflow-hidden border border-gray-100 shadow-sm group/image">
                     <img
                         src={notice.images![currentImageIndex]}
                         alt={`Notice image ${currentImageIndex + 1}`}
-                        className="w-full h-full object-contain"
+                        className="w-full h-auto block"
                     />
 
                     {/* Navigation Buttons (only if > 1 image) */}
