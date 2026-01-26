@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/utils/supabase/client";
-import { Plus, Pencil, Trash2, X, AlertCircle, Image as ImageIcon, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Pencil, Trash2, X, AlertCircle, Image as ImageIcon, ChevronLeft, ChevronRight, ChevronDown, ChevronUp } from "lucide-react";
 
 interface Notice {
     id: string;
@@ -236,85 +236,74 @@ export default function NoticesPage() {
                                 />
                             </div>
 
-                            {/* Image Upload Area */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">이미지 첨부 (선택)</label>
+                            {/* Content Area with Integrated Image Upload Toolbar */}
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <label className="block text-sm font-medium text-gray-700">공지 내용</label>
 
-                                {/* Upload Dropzone */}
-                                <div className="relative group">
-                                    <input
-                                        type="file"
-                                        multiple
-                                        accept="image/*"
-                                        onChange={(e) => {
-                                            if (e.target.files && e.target.files.length > 0) {
-                                                setSelectedFiles(e.target.files);
-                                            }
-                                        }}
-                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                                    />
-                                    <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 flex flex-col items-center justify-center bg-gray-50 group-hover:bg-blue-50 group-hover:border-blue-400 transition-all text-gray-400 group-hover:text-blue-500">
-                                        <div className="p-3 bg-white rounded-full shadow-sm mb-3 group-hover:scale-110 transition-transform">
-                                            <ImageIcon className="w-8 h-8" />
-                                        </div>
-                                        <p className="font-semibold text-sm">
-                                            클릭하여 이미지 업로드
-                                        </p>
-                                        <p className="text-xs text-gray-400 mt-1">
-                                            또는 파일을 여기로 드래그하세요
-                                        </p>
+                                    {/* Image Upload Button */}
+                                    <div className="flex items-center gap-2">
+                                        <label
+                                            htmlFor="image-upload"
+                                            className="cursor-pointer flex items-center gap-2 px-3 py-1.5 bg-gray-50 hover:bg-blue-50 hover:text-blue-600 border border-gray-200 hover:border-blue-200 rounded-md transition-all text-sm text-gray-600"
+                                        >
+                                            <ImageIcon className="w-4 h-4" />
+                                            <span>사진 첨부</span>
+                                            <input
+                                                id="image-upload"
+                                                type="file"
+                                                multiple
+                                                accept="image/*"
+                                                onChange={(e) => {
+                                                    if (e.target.files && e.target.files.length > 0) {
+                                                        setSelectedFiles(e.target.files);
+                                                    }
+                                                }}
+                                                className="hidden"
+                                            />
+                                        </label>
                                     </div>
                                 </div>
 
-                                {/* Selected Files & Existing Images Preview */}
+                                {/* Selected Files & Existing Images Preview - Shows above text */}
                                 {(selectedFiles || existingImages.length > 0) && (
-                                    <div className="mt-4 grid grid-cols-4 gap-2">
+                                    <div className="flex gap-2 overflow-x-auto pb-2">
                                         {/* Existing Images */}
                                         {existingImages.map((src, idx) => (
-                                            <div key={`exist-${idx}`} className="relative aspect-square rounded-lg overflow-hidden border group">
+                                            <div key={`exist-${idx}`} className="relative flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border group">
                                                 <img src={src} alt={`existing-${idx}`} className="w-full h-full object-cover" />
                                                 <button
                                                     type="button"
                                                     onClick={() => removeExistingImage(idx)}
-                                                    className="absolute top-1 right-1 bg-red-500/80 hover:bg-red-600 text-white rounded-full p-1 opacity-100 transition-all shadow-sm"
+                                                    className="absolute top-1 right-1 bg-black/50 hover:bg-red-500 text-white rounded-full p-1 transition-colors"
                                                 >
                                                     <X className="w-3 h-3" />
                                                 </button>
-                                                <div className="absolute bottom-0 inset-x-0 bg-black/50 text-white text-[10px] px-1 py-0.5 text-center truncate">
-                                                    기존 이미지
-                                                </div>
                                             </div>
                                         ))}
 
                                         {/* New Files Preview */}
                                         {selectedFiles && Array.from(selectedFiles).map((file, idx) => (
-                                            <div key={`new-${idx}`} className="relative aspect-square rounded-lg overflow-hidden border bg-gray-100">
-                                                {/* We can create object URL for preview */}
+                                            <div key={`new-${idx}`} className="relative flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border group">
                                                 <img
                                                     src={URL.createObjectURL(file)}
                                                     alt="preview"
-                                                    className="w-full h-full object-cover opacity-80"
+                                                    className="w-full h-full object-cover"
                                                     onLoad={(e) => URL.revokeObjectURL((e.target as HTMLImageElement).src)}
                                                 />
                                                 <div className="absolute top-1 right-1 bg-blue-500 text-white rounded-full p-1 shadow-sm">
-                                                    <Plus className="w-3 h-3 rotate-45" /> {/* Use as fake remove icon or just indicator */}
-                                                </div>
-                                                <div className="absolute bottom-0 inset-x-0 bg-blue-600/80 text-white text-[10px] px-1 py-0.5 text-center truncate">
-                                                    새 파일
+                                                    <div className="w-3 h-3 rounded-full bg-white" /> {/* Indicator */}
                                                 </div>
                                             </div>
                                         ))}
                                     </div>
                                 )}
-                            </div>
 
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">공지 내용</label>
                                 <textarea
                                     value={formData.content}
                                     onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                                    className="w-full h-40 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-none"
-                                    placeholder="내용을 입력하세요"
+                                    className="w-full h-64 px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-none text-base leading-relaxed"
+                                    placeholder="공지사항 내용을 입력하세요..."
                                     required
                                 />
                             </div>
@@ -345,74 +334,103 @@ export default function NoticesPage() {
 
 function NoticeItem({ notice, isInstructor, onEdit, onDelete }: { notice: Notice, isInstructor: boolean, onEdit: () => void, onDelete: () => void }) {
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
+    const [isExpanded, setIsExpanded] = useState(false);
     const hasImages = notice.images && notice.images.length > 0;
 
-    const nextImage = () => {
+    const nextImage = (e: React.MouseEvent) => {
+        e.stopPropagation();
         if (!notice.images) return;
         setCurrentImageIndex((prev) => (prev + 1) % notice.images!.length);
     };
 
-    const prevImage = () => {
+    const prevImage = (e: React.MouseEvent) => {
+        e.stopPropagation();
         if (!notice.images) return;
         setCurrentImageIndex((prev) => (prev - 1 + notice.images!.length) % notice.images!.length);
     };
 
     return (
-        <div className="bg-white rounded-xl border p-6 hover:shadow-md transition-shadow overflow-hidden">
-            <div className="flex justify-between items-start mb-4">
-                <div>
-                    <h3 className="text-xl font-bold text-gray-900 mb-1">{notice.title}</h3>
+        <div
+            className={`bg-white rounded-xl border transition-all overflow-hidden ${isExpanded ? 'shadow-md' : 'hover:shadow-sm'}`}
+        >
+            <div
+                onClick={() => setIsExpanded(!isExpanded)}
+                className="p-6 cursor-pointer flex justify-between items-start group"
+            >
+                <div className="flex-1 pr-4">
+                    <div className="flex items-center gap-2 mb-1">
+                        <h3 className={`text-xl font-bold transition-colors ${isExpanded ? 'text-blue-600' : 'text-gray-900 group-hover:text-blue-600'}`}>
+                            {notice.title}
+                        </h3>
+                        {hasImages && !isExpanded && (
+                            <ImageIcon className="w-4 h-4 text-gray-400" />
+                        )}
+                    </div>
                     <span className="text-sm text-gray-400">
                         {new Date(notice.created_at).toLocaleDateString()}
                     </span>
                 </div>
-                {isInstructor && (
-                    <div className="flex gap-2">
-                        <button onClick={onEdit} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
-                            <Pencil className="w-4 h-4" />
-                        </button>
-                        <button onClick={onDelete} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
-                            <Trash2 className="w-4 h-4" />
-                        </button>
+
+                <div className="flex items-center gap-4">
+                    {/* Toggle Icon */}
+                    <div className={`p-2 rounded-full bg-gray-50 text-gray-400 group-hover:bg-blue-50 group-hover:text-blue-500 transition-colors`}>
+                        {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
                     </div>
-                )}
-            </div>
 
-            {/* Image Carousel */}
-            {hasImages && (
-                <div className="relative -mx-6 mb-6 group/image bg-gray-50 border-y border-gray-100">
-                    <img
-                        src={notice.images![currentImageIndex]}
-                        alt={`Notice image ${currentImageIndex + 1}`}
-                        className="w-full h-auto block"
-                    />
-
-                    {/* Navigation Buttons (only if > 1 image) */}
-                    {notice.images!.length > 1 && (
-                        <>
-                            <button
-                                onClick={prevImage}
-                                className="absolute left-2 top-1/2 -translate-y-1/2 p-2 bg-black/30 text-white rounded-full hover:bg-black/50 transition-colors opacity-0 group-hover/image:opacity-100"
-                            >
-                                <ChevronLeft className="w-6 h-6" />
+                    {/* Instructor Actions */}
+                    {isInstructor && (
+                        <div className="flex gap-1 border-l pl-4" onClick={(e) => e.stopPropagation()}>
+                            <button onClick={onEdit} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                                <Pencil className="w-4 h-4" />
                             </button>
-                            <button
-                                onClick={nextImage}
-                                className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-black/30 text-white rounded-full hover:bg-black/50 transition-colors opacity-0 group-hover/image:opacity-100"
-                            >
-                                <ChevronRight className="w-6 h-6" />
+                            <button onClick={onDelete} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                                <Trash2 className="w-4 h-4" />
                             </button>
-                            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/30 px-3 py-1 rounded-full text-white text-xs backdrop-blur-sm">
-                                {currentImageIndex + 1} / {notice.images!.length}
-                            </div>
-                        </>
+                        </div>
                     )}
                 </div>
-            )}
-
-            <div className="prose prose-sm max-w-none text-gray-700 whitespace-pre-wrap leading-relaxed mt-4">
-                {notice.content}
             </div>
+
+            {/* Expanded Content */}
+            {isExpanded && (
+                <div className="px-6 pb-6 animate-in slide-in-from-top-2 duration-200">
+                    {/* Image Carousel */}
+                    {hasImages && (
+                        <div className="relative -mx-6 mb-6 group/image bg-gray-50 border-y border-gray-100">
+                            <img
+                                src={notice.images![currentImageIndex]}
+                                alt={`Notice image ${currentImageIndex + 1}`}
+                                className="w-full h-auto block"
+                            />
+
+                            {/* Navigation Buttons (only if > 1 image) */}
+                            {notice.images!.length > 1 && (
+                                <>
+                                    <button
+                                        onClick={prevImage}
+                                        className="absolute left-2 top-1/2 -translate-y-1/2 p-2 bg-black/30 text-white rounded-full hover:bg-black/50 transition-colors opacity-0 group-hover/image:opacity-100"
+                                    >
+                                        <ChevronLeft className="w-6 h-6" />
+                                    </button>
+                                    <button
+                                        onClick={nextImage}
+                                        className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-black/30 text-white rounded-full hover:bg-black/50 transition-colors opacity-0 group-hover/image:opacity-100"
+                                    >
+                                        <ChevronRight className="w-6 h-6" />
+                                    </button>
+                                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/30 px-3 py-1 rounded-full text-white text-xs backdrop-blur-sm">
+                                        {currentImageIndex + 1} / {notice.images!.length}
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    )}
+
+                    <div className="prose prose-sm max-w-none text-gray-700 whitespace-pre-wrap leading-relaxed">
+                        {notice.content}
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
