@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
+import ReactMarkdown from "react-markdown";
 import { supabase } from "@/utils/supabase/client";
 import { Plus, Pencil, Trash2, X, Globe, User } from "lucide-react";
 
@@ -121,7 +122,7 @@ export default function PortfolioPage() {
                     .update({
                         title: generatedTitle,
                         description: formData.description,
-                        project_url: formData.project_url // Optional: Keep passing it or pass empty string if removed from UI
+                        project_url: formData.project_url
                     })
                     .eq('id', editingId);
 
@@ -174,7 +175,6 @@ export default function PortfolioPage() {
 
     const openEditModal = (item: PortfolioItem) => {
         setEditingId(item.id);
-        // We use description as the main content now
         setFormData({
             title: item.title,
             description: item.description,
@@ -222,7 +222,6 @@ export default function PortfolioPage() {
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {items.map((item) => (
                         <div key={item.id} className="bg-white rounded-xl border hover:shadow-lg transition-all group flex flex-col h-full">
-                            {/* Placeholder Image or Preview could go here */}
                             <div className="p-6 flex-1 flex flex-col">
                                 <div className="flex justify-between items-start mb-2">
                                     <h3 className="text-xl font-bold text-gray-900 line-clamp-2">{item.title}</h3>
@@ -244,15 +243,16 @@ export default function PortfolioPage() {
                                     )}
                                 </div>
 
-                                <p className="text-gray-500 text-sm mb-6 flex-1 line-clamp-3 whitespace-pre-wrap">
-                                    {item.description || "설명이 없습니다."}
-                                </p>
+                                <div className="text-gray-500 text-sm mb-6 flex-1 line-clamp-4 text-ellipsis overflow-hidden break-words [&_img]:rounded-lg [&_img]:w-full [&_img]:object-cover [&_img]:max-h-60 [&_img]:my-2 [&_a]:text-blue-600 [&_a]:hover:underline">
+                                    <ReactMarkdown>
+                                        {item.description || "설명이 없습니다."}
+                                    </ReactMarkdown>
+                                </div>
 
                                 <div className="pt-4 border-t flex items-center justify-between">
                                     <span className="text-xs text-gray-400">
                                         {new Date(item.created_at).toLocaleDateString()}
                                     </span>
-                                    {/* Project URL is now part of description, but keeping this if we still store it in project_url column for legacy or if user added explicitly */}
                                     {item.project_url && (
                                         <a
                                             href={item.project_url}
@@ -285,7 +285,7 @@ export default function PortfolioPage() {
                         </div>
 
                         <form onSubmit={handleSubmit} className="p-6 space-y-4">
-                            {/* User Info (Read-only) */}
+                            {/* User Info */}
                             <div className="flex items-center gap-3 bg-gray-50 p-3 rounded-lg">
                                 <div className="bg-blue-100 p-2 rounded-full">
                                     <User className="w-5 h-5 text-blue-600" />
@@ -298,7 +298,7 @@ export default function PortfolioPage() {
                                 </div>
                             </div>
 
-                            {/* Simplified Content Input */}
+                            {/* Content Input */}
                             <div>
                                 <textarea
                                     value={formData.description}
@@ -308,7 +308,7 @@ export default function PortfolioPage() {
                                     required
                                 />
 
-                                {/* Media Placeholders */}
+                                {/* Media Actions */}
                                 <div className="flex gap-2 mt-2">
                                     <button
                                         type="button"
@@ -337,7 +337,7 @@ export default function PortfolioPage() {
                                         <Globe className="w-5 h-5" />
                                     </button>
 
-                                    {/* Hidden File Inputs */}
+                                    {/* Upload Inputs */}
                                     <input
                                         type="file"
                                         ref={imageInputRef}
@@ -354,8 +354,6 @@ export default function PortfolioPage() {
                                     />
                                 </div>
                             </div>
-
-                            {/* Removed the separate Project URL input field */}
 
                             <div className="flex justify-end gap-3 pt-2">
                                 <button
