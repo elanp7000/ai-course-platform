@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import { supabase } from "@/utils/supabase/client";
-import { Plus, Pencil, Trash2, X, Globe, User } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Globe, User, FileCode } from "lucide-react";
 
 interface PortfolioItem {
     id: string;
@@ -32,6 +32,7 @@ export default function PortfolioPage() {
     const [isUploading, setIsUploading] = useState(false);
     const imageInputRef = useRef<HTMLInputElement>(null);
     const videoInputRef = useRef<HTMLInputElement>(null);
+    const htmlInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         fetchPortfolios();
@@ -107,7 +108,7 @@ export default function PortfolioPage() {
         return currentUser?.user_metadata?.full_name || currentUser?.email?.split('@')[0] || '사용자';
     };
 
-    const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'video') => {
+    const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'video' | 'html') => {
         const file = event.target.files?.[0];
         if (!file) return;
 
@@ -129,7 +130,9 @@ export default function PortfolioPage() {
 
             const markdown = type === 'image'
                 ? `\n![${file.name}](${publicUrl})\n`
-                : `\n[동영상 보기](${publicUrl})\n`;
+                : type === 'video'
+                    ? `\n[동영상 보기](${publicUrl})\n`
+                    : `\n[HTML 프로젝트 보기](${publicUrl})\n`;
 
             setFormData(prev => ({
                 ...prev,
@@ -427,6 +430,16 @@ export default function PortfolioPage() {
                                         <Globe className="w-5 h-5" />
                                     </button>
 
+                                    <button
+                                        type="button"
+                                        onClick={() => htmlInputRef.current?.click()}
+                                        className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors relative"
+                                        title="HTML 파일 추가"
+                                    >
+                                        <FileCode className="w-5 h-5" />
+                                        {isUploading && <span className="absolute top-0 right-0 w-2 h-2 bg-blue-600 rounded-full animate-ping"></span>}
+                                    </button>
+
                                     {/* Upload Inputs */}
                                     <input
                                         type="file"
@@ -441,6 +454,13 @@ export default function PortfolioPage() {
                                         className="hidden"
                                         accept="video/*"
                                         onChange={(e) => handleFileUpload(e, 'video')}
+                                    />
+                                    <input
+                                        type="file"
+                                        ref={htmlInputRef}
+                                        className="hidden"
+                                        accept=".html,text/html"
+                                        onChange={(e) => handleFileUpload(e, 'html')}
                                     />
                                 </div>
                             </div>

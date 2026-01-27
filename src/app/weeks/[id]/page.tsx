@@ -4,12 +4,12 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/utils/supabase/client";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, BookOpen, FileText, PlayCircle, Plus, Trash2, X, Image as ImageIcon } from "lucide-react";
+import { ArrowLeft, BookOpen, FileText, PlayCircle, Plus, Trash2, X, Image as ImageIcon, FileCode } from "lucide-react";
 
 type Material = {
     id: string;
     title: string;
-    type: 'video' | 'text' | 'pdf' | 'link' | 'image';
+    type: 'video' | 'text' | 'pdf' | 'link' | 'image' | 'html';
     content_url?: string;
     description?: string;
 };
@@ -282,21 +282,23 @@ export default function WeekDetailPage() {
                                     <option value="link">링크 (Link)</option>
                                     <option value="pdf">PDF 파일</option>
                                     <option value="image">이미지 (Image)</option>
+                                    <option value="html">HTML 파일</option>
                                     <option value="text">텍스트/글</option>
                                 </select>
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    {['pdf', 'image', 'video'].includes(newMaterial.type) ? '파일 첨부' : '링크 주소 (URL)'}
+                                    {['pdf', 'image', 'video', 'html'].includes(newMaterial.type) ? '파일 첨부' : '링크 주소 (URL)'}
                                 </label>
 
-                                {['pdf', 'image', 'video'].includes(newMaterial.type) ? (
+                                {['pdf', 'image', 'video', 'html'].includes(newMaterial.type) ? (
                                     <input
                                         type="file"
                                         accept={
                                             newMaterial.type === 'pdf' ? '.pdf' :
                                                 newMaterial.type === 'image' ? 'image/*' :
-                                                    'video/*'
+                                                    newMaterial.type === 'html' ? '.html,text/html' :
+                                                        'video/*'
                                         }
                                         onChange={e => setFile(e.target.files?.[0] || null)}
                                         className="w-full p-1.5 border rounded-lg"
@@ -352,6 +354,7 @@ export default function WeekDetailPage() {
                         if (material.type === 'video') Icon = PlayCircle;
                         if (material.type === 'image') Icon = ImageIcon;
                         if (material.type === 'pdf') Icon = FileText;
+                        if (material.type === 'html') Icon = FileCode;
 
                         return (
                             <div
@@ -410,12 +413,12 @@ export default function WeekDetailPage() {
                                                         target="_blank"
                                                         rel="noopener noreferrer"
                                                         className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors inline-flex items-center gap-2 ${material.type === 'pdf'
-                                                                ? "bg-red-50 text-red-600 hover:bg-red-100 border border-red-200"
-                                                                : "bg-blue-600 text-white hover:bg-blue-700"
+                                                            ? "bg-red-50 text-red-600 hover:bg-red-100 border border-red-200"
+                                                            : "bg-blue-600 text-white hover:bg-blue-700"
                                                             }`}
                                                     >
                                                         {material.type === 'pdf' ? <FileText className="w-4 h-4" /> : <BookOpen className="w-4 h-4" />}
-                                                        {material.type === 'pdf' ? "PDF 보기/다운로드" : "학습하기"}
+                                                        {material.type === 'pdf' ? "PDF 보기/다운로드" : material.type === 'html' ? "HTML 보기" : "학습하기"}
                                                     </a>
                                                 )}
 
