@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BookOpen, Home, List, MessageCircle, Settings, User } from "lucide-react";
+import { BookOpen, Home, List, MessageCircle, Settings, User, LucideIcon } from "lucide-react";
 
 export function Sidebar() {
     return (
@@ -23,7 +23,7 @@ export function Sidebar() {
     );
 }
 
-function NavItem({ href, icon: Icon, label }: { href: string; icon: any; label: string }) {
+function NavItem({ href, icon: Icon, label }: { href: string; icon: LucideIcon; label: string }) {
     return (
         <Link href={href} className="flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 hover:text-blue-600 rounded-lg transition-colors">
             <Icon className="w-5 h-5" />

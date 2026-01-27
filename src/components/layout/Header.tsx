@@ -6,8 +6,10 @@ import { supabase } from "@/utils/supabase/client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
+import { User as SupabaseUser } from "@supabase/supabase-js";
+
 export function Header() {
-    const [user, setUser] = useState<any>(null);
+    const [user, setUser] = useState<SupabaseUser | null>(null);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const router = useRouter();
 
