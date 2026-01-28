@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, Suspense } from "react";
 import ReactMarkdown from "react-markdown";
 import { supabase } from "@/utils/supabase/client";
-import { Plus, Pencil, Trash2, X, Globe, User, FileCode, Users } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Globe, User, FileCode, Users, FolderInput } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 
 interface UnifiedItem {
@@ -49,6 +49,7 @@ function PortfolioContent() {
     // Modal State
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isTopicModal, setIsTopicModal] = useState(false);
+    const [isMoveOnly, setIsMoveOnly] = useState(false); // NEW: Instructor Move Mode
     const [editingId, setEditingId] = useState<string | null>(null);
     const [formData, setFormData] = useState({ title: "", description: "", project_url: "", topic_id: "" });
 
@@ -304,17 +305,32 @@ function PortfolioContent() {
         setIsModalOpen(true);
     };
 
+    const openMoveModal = (e: React.MouseEvent, item: UnifiedItem) => {
+        e.stopPropagation();
+        setEditingId(item.id);
+        setFormData({
+            title: item.title,
+            description: item.description, // Keep description to satisfy requirement
+            project_url: item.project_url || "",
+            topic_id: item.topic_id || ""
+        });
+        setIsMoveOnly(true);
+        setIsModalOpen(true);
+    };
+
     const openCreateModal = (type: 'topic' | 'project') => {
         if (!currentUser) return alert("로그인이 필요합니다.");
         setEditingId(null);
         setFormData({ title: "", description: "", project_url: "", topic_id: "" });
         setIsTopicModal(type === 'topic');
+        setIsMoveOnly(false);
         setIsModalOpen(true);
     };
 
     const closeModal = () => {
         setIsModalOpen(false);
         setIsTopicModal(false);
+        setIsMoveOnly(false); // Reset
         setEditingId(null);
         setFormData({ title: "", description: "", project_url: "", topic_id: "" });
     };
@@ -346,6 +362,7 @@ function PortfolioContent() {
         }
 
         // Project Creation Logic
+        // For move mode, we just want to update topic_id, but the update payload is same.
         if (!formData.description.trim()) return;
 
         const generatedTitle = formData.description.length > 20
@@ -356,17 +373,19 @@ function PortfolioContent() {
 
         try {
             if (editingId) {
+                const updatePayload: any = {
+                    description: formData.description,
+                    project_url: formData.project_url,
+                    topic_id: formData.topic_id || null
+                };
+
                 const { error } = await supabase
                     .from('portfolios')
-                    .update({
-                        description: formData.description,
-                        project_url: formData.project_url,
-                        topic_id: formData.topic_id || null
-                    })
+                    .update(updatePayload)
                     .eq('id', editingId);
 
                 if (error) throw error;
-                alert("수정되었습니다.");
+                alert(isMoveOnly ? "주제가 변경되었습니다." : "수정되었습니다.");
             } else {
                 const { error } = await supabase
                     .from('portfolios')
@@ -424,22 +443,36 @@ function PortfolioContent() {
                                 </span>
                             </div>
                         </div>
-                        {isOwner(item) && (
-                            <div className="flex gap-1 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
+
+                        <div className="flex gap-1 ml-2 transition-opacity">
+                            {/* Instructor Move Button - Only show if instructor and NOT creating new one */}
+                            {userRole === 'instructor' && !isDiscussion && (
                                 <button
-                                    onClick={(e) => openEditModal(e, item)}
-                                    className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded"
+                                    onClick={(e) => openMoveModal(e, item)}
+                                    className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded"
+                                    title="주제 이동"
                                 >
-                                    <Pencil className="w-4 h-4" />
+                                    <FolderInput className="w-4 h-4" />
                                 </button>
-                                <button
-                                    onClick={(e) => handleDelete(e, item)}
-                                    className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"
-                                >
-                                    <Trash2 className="w-4 h-4" />
-                                </button>
-                            </div>
-                        )}
+                            )}
+
+                            {isOwner(item) && (
+                                <>
+                                    <button
+                                        onClick={(e) => openEditModal(e, item)}
+                                        className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded"
+                                    >
+                                        <Pencil className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                        onClick={(e) => handleDelete(e, item)}
+                                        className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
+                                </>
+                            )}
+                        </div>
                     </div>
 
                     <div className="flex-1 mb-4 h-48 bg-gray-50 rounded-lg overflow-hidden relative flex items-center justify-center">
@@ -630,7 +663,8 @@ function PortfolioContent() {
                             <h2 className="text-xl font-bold">
                                 {isTopicModal
                                     ? "새 과제(주제) 등록"
-                                    : (editingId ? "프로젝트 수정" : "새 프로젝트 추가")}
+                                    : (isMoveOnly ? "과제 주제 이동"
+                                        : (editingId ? "프로젝트 수정" : "새 프로젝트 추가"))}
                             </h2>
                             <button onClick={closeModal} className="text-gray-400 hover:text-gray-600">
                                 <X className="w-6 h-6" />
@@ -638,7 +672,7 @@ function PortfolioContent() {
                         </div>
 
                         <form onSubmit={handleSubmit} className="p-6 space-y-4">
-                            {!isTopicModal && (
+                            {!isTopicModal && !isMoveOnly && (
                                 <div className="flex items-center gap-3 bg-gray-50 p-3 rounded-lg">
                                     <div className="bg-blue-100 p-2 rounded-full">
                                         <User className="w-5 h-5 text-blue-600" />
@@ -649,6 +683,13 @@ function PortfolioContent() {
                                             {getAuthorName()}
                                         </p>
                                     </div>
+                                </div>
+                            )}
+
+                            {isMoveOnly && (
+                                <div className="bg-indigo-50 p-4 rounded-lg mb-4 text-sm text-indigo-700">
+                                    <p className="font-bold mb-1">📢 강사 전용 기능</p>
+                                    <p>해당 학습자의 프로젝트를 다른 주제로 이동시킬 수 있습니다. 제목과 내용은 수정할 수 없습니다.</p>
                                 </div>
                             )}
 
@@ -673,9 +714,9 @@ function PortfolioContent() {
                                 </div>
                             ) : (
                                 <>
-                                    {!isMyView && (
+                                    {(!isMyView || isMoveOnly) && (
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">주제 선택 (선택사항)</label>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">주제 선택 {isMoveOnly ? "" : "(선택사항)"}</label>
                                             <select
                                                 value={formData.topic_id}
                                                 onChange={(e) => setFormData({ ...formData, topic_id: e.target.value })}
@@ -691,57 +732,59 @@ function PortfolioContent() {
                                         </div>
                                     )}
 
-                                    <div>
-                                        <textarea
-                                            value={formData.description}
-                                            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                            className="w-full h-40 p-4 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none text-base"
-                                            placeholder="프로젝트에 대해 설명해주세요..."
-                                            required
-                                        />
+                                    {!isMoveOnly && (
+                                        <div>
+                                            <textarea
+                                                value={formData.description}
+                                                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                                                className="w-full h-40 p-4 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none text-base"
+                                                placeholder="프로젝트에 대해 설명해주세요..."
+                                                required
+                                            />
 
-                                        <div className="flex gap-2 mt-2">
-                                            <button
-                                                type="button"
-                                                onClick={() => imageInputRef.current?.click()}
-                                                className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors relative"
-                                                title="사진 추가"
-                                            >
-                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                                                {isUploading && <span className="absolute top-0 right-0 w-2 h-2 bg-blue-600 rounded-full animate-ping"></span>}
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => videoInputRef.current?.click()}
-                                                className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors relative"
-                                                title="동영상 추가"
-                                            >
-                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
-                                                {isUploading && <span className="absolute top-0 right-0 w-2 h-2 bg-blue-600 rounded-full animate-ping"></span>}
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={handleLinkInsert}
-                                                className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                                title="링크 추가"
-                                            >
-                                                <Globe className="w-5 h-5" />
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => htmlInputRef.current?.click()}
-                                                className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors relative"
-                                                title="HTML 파일 추가"
-                                            >
-                                                <FileCode className="w-5 h-5" />
-                                                {isUploading && <span className="absolute top-0 right-0 w-2 h-2 bg-blue-600 rounded-full animate-ping"></span>}
-                                            </button>
+                                            <div className="flex gap-2 mt-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => imageInputRef.current?.click()}
+                                                    className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors relative"
+                                                    title="사진 추가"
+                                                >
+                                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                                    {isUploading && <span className="absolute top-0 right-0 w-2 h-2 bg-blue-600 rounded-full animate-ping"></span>}
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => videoInputRef.current?.click()}
+                                                    className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors relative"
+                                                    title="동영상 추가"
+                                                >
+                                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                                                    {isUploading && <span className="absolute top-0 right-0 w-2 h-2 bg-blue-600 rounded-full animate-ping"></span>}
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={handleLinkInsert}
+                                                    className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                    title="링크 추가"
+                                                >
+                                                    <Globe className="w-5 h-5" />
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => htmlInputRef.current?.click()}
+                                                    className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors relative"
+                                                    title="HTML 파일 추가"
+                                                >
+                                                    <FileCode className="w-5 h-5" />
+                                                    {isUploading && <span className="absolute top-0 right-0 w-2 h-2 bg-blue-600 rounded-full animate-ping"></span>}
+                                                </button>
 
-                                            <input type="file" ref={imageInputRef} className="hidden" accept="image/*" onChange={(e) => handleFileUpload(e, 'image')} />
-                                            <input type="file" ref={videoInputRef} className="hidden" accept="video/*" onChange={(e) => handleFileUpload(e, 'video')} />
-                                            <input type="file" ref={htmlInputRef} className="hidden" accept=".html,text/html" onChange={(e) => handleFileUpload(e, 'html')} />
+                                                <input type="file" ref={imageInputRef} className="hidden" accept="image/*" onChange={(e) => handleFileUpload(e, 'image')} />
+                                                <input type="file" ref={videoInputRef} className="hidden" accept="video/*" onChange={(e) => handleFileUpload(e, 'video')} />
+                                                <input type="file" ref={htmlInputRef} className="hidden" accept=".html,text/html" onChange={(e) => handleFileUpload(e, 'html')} />
+                                            </div>
                                         </div>
-                                    </div>
+                                    )}
                                 </>
                             )}
 
