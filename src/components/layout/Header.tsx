@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, Menu, User, LogOut, LogIn } from "lucide-react";
+import { Bell, Menu, User, LogOut, LogIn, Settings } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/utils/supabase/client";
 import Link from "next/link";
@@ -85,6 +85,14 @@ export function Header() {
                                         {user.email}
                                     </p>
                                 </div>
+                                <Link
+                                    href="/settings"
+                                    onClick={() => setIsMenuOpen(false)}
+                                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                                >
+                                    <Settings className="w-4 h-4" />
+                                    설정 (내 정보 수정)
+                                </Link>
                                 <button
                                     onClick={handleLogout}
                                     className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { BookOpen, Home, List, MessageCircle, Settings, User, LucideIcon, Bell, MonitorCloud, Library } from "lucide-react";
+import { Bot, Home, List, MessageCircle, Settings, User, LucideIcon, Bell, MonitorCloud, Library } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/utils/supabase/client";
 
@@ -43,7 +43,7 @@ export function Sidebar() {
         <aside className="w-64 bg-white border-r h-full flex flex-col hidden md:flex">
             <div className="h-16 border-b flex items-center justify-between px-6">
                 <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-                    <BookOpen className="w-6 h-6 text-blue-600" />
+                    <Bot className="w-6 h-6 text-blue-600" />
                     <span className="font-bold text-xl text-gray-800">
                         AI Course
                     </span>
@@ -60,22 +60,23 @@ export function Sidebar() {
                 <NavItem href="/materials" icon={Library} label="학습 자료" />
                 <NavItem href="/portfolio" icon={MonitorCloud} label="실습 과제" />
                 {userInfo && (
-                    <NavItem href="/portfolio?view=my" icon={User} label="나의 포트폴리오" customClass="text-blue-600 hover:text-blue-700 hover:bg-blue-50 font-bold" />
+                    <NavItem
+                        href="/portfolio?view=my"
+                        icon={User}
+                        label="나의 포트폴리오"
+                        customClass="text-gray-600 hover:bg-gray-50 hover:text-blue-600 font-semibold"
+                    />
                 )}
             </nav>
-
-            <div className="p-4 border-t">
-                <NavItem href="/settings" icon={Settings} label="설정" />
-            </div>
         </aside>
     );
 }
 
 function NavItem({ href, icon: Icon, label, customClass }: { href: string; icon: LucideIcon; label: string; customClass?: string }) {
     return (
-        <Link href={href} className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${customClass || 'text-gray-600 hover:bg-gray-50 hover:text-blue-600'}`}>
+        <Link href={href} className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${customClass || 'text-gray-600 hover:bg-gray-50 hover:text-blue-600 font-medium'}`}>
             <Icon className="w-5 h-5" />
-            <span className="font-medium">{label}</span>
+            <span>{label}</span>
         </Link>
     );
 }

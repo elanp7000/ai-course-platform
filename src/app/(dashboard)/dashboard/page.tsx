@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, BookOpen, CheckCircle, Clock, Lock, Sparkles, Star, Settings } from "lucide-react";
+import { ArrowRight, BookOpen, CheckCircle, Clock, Lock, Sparkles, Star, Settings, Circle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/utils/supabase/client";
 
@@ -32,16 +32,30 @@ export default function DashboardPage() {
                 .order('week_number', { ascending: true });
 
             if (weeksData) {
-                // Determine status based on logic (For now, unlock all if data exists, or implement progress logic later)
-                // Here we just map to the UI format
-                const formattedWeeks = weeksData.map(week => ({
-                    id: week.week_number, // Use week_number for ID in UI
-                    db_id: week.id,       // Real UUID
-                    title: week.title,
-                    subtitle: `${week.week_number}주차 과정`,
-                    description: week.description,
-                    status: week.is_current ? "in-progress" : "completed" // Simplification: All unlocked, but only current blinks
-                }));
+                // Find current week number to determine status
+                const currentWeek = weeksData.find(w => w.is_current);
+                const currentWeekNum = currentWeek ? currentWeek.week_number : 0;
+
+                const formattedWeeks = weeksData.map(week => {
+                    let status = "upcoming";
+                    if (week.is_current) {
+                        status = "in-progress";
+                    } else if (currentWeekNum > 0 && week.week_number < currentWeekNum) {
+                        status = "completed";
+                    } else {
+                        status = "upcoming";
+                    }
+
+                    return {
+                        id: week.week_number, // Use week_number for ID in UI
+                        db_id: week.id,       // Real UUID
+                        title: week.title,
+                        subtitle: `${week.week_number}주차 과정`,
+                        description: week.description,
+                        is_current: week.is_current,
+                        status: status
+                    };
+                });
                 setWeeks(formattedWeeks);
             }
 
@@ -87,15 +101,27 @@ export default function DashboardPage() {
     };
 
     const handleSetCurrentWeek = async (weekId: string) => {
-        // Optimistic update for UI responsiveness
+        // Find the new current week to recalculate statuses locally
         const targetWeek = weeks.find(w => w.db_id === weekId);
         if (!targetWeek) return;
+        const newCurrentNum = targetWeek.id; // week_number
 
-        setWeeks(weeks.map(w => ({
-            ...w,
-            is_current: w.db_id === weekId,
-            status: w.db_id === weekId ? "in-progress" : "completed" // Simplification: Always unlocked to allow instructor access
-        })));
+        setWeeks(weeks.map(w => {
+            let status = "upcoming";
+            if (w.db_id === weekId) {
+                status = "in-progress";
+            } else if (w.id < newCurrentNum) {
+                status = "completed";
+            } else {
+                status = "upcoming";
+            }
+
+            return {
+                ...w,
+                is_current: w.db_id === weekId,
+                status: status
+            };
+        }));
 
         // Use RPC to atomically set current week and unset others
         const { error } = await supabase.rpc('set_current_week', { p_week_id: weekId });
@@ -114,9 +140,6 @@ export default function DashboardPage() {
     // Calculate Progress
     const totalWeeks = weeks.length || 16;
     const currentWeekNum = currentWeek ? currentWeek.id : 0;
-    // If no current week, maybe course hasn't started (0%) or finished (100%)? 
-    // For now, let's assume if we have weeks but no current, it might be 0 unless we track 'completed' explicitly.
-    // Simpler logic: (currentWeek / total) * 100
     const progressPercent = Math.round((currentWeekNum / totalWeeks) * 100);
 
     const displayName = user?.user_metadata?.full_name
@@ -134,11 +157,14 @@ export default function DashboardPage() {
 
                 <div className="relative p-6 md:p-8">
                     <div className="flex flex-col md:flex-row justify-between items-center gap-6">
-                        <div className="space-y-2 max-w-3xl">
-                            <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-blue-500/30 border border-blue-400/30 text-xs font-medium backdrop-blur-sm mb-1">
-                                <Sparkles className="w-3 h-3 text-blue-200" />
-                                <span>AI Course Platform</span>
+                        <div className="flex flex-col gap-6 max-w-3xl">
+                            <div>
+                                <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-blue-500/30 border border-blue-400/30 text-xs font-medium backdrop-blur-sm">
+                                    <Sparkles className="w-3 h-3 text-blue-200" />
+                                    <span>AI Course Platform</span>
+                                </div>
                             </div>
+
                             <h1 className="text-2xl md:text-3xl font-bold leading-tight">
                                 {loading ? (
                                     <span className="animate-pulse bg-white/20 rounded h-8 w-64 block"></span>
@@ -247,11 +273,15 @@ export default function DashboardPage() {
 }
 
 function WeekCard({ week, isInstructor, onEdit, onSetCurrent }: { week: any, isInstructor: boolean, onEdit: () => void, onSetCurrent: () => void }) {
-    // Determine status logic here if needed, for now using passed status
-    const isLocked = week.status === "locked";
-    // ... rest of component logic (can reuse existing styles)
     const isCompleted = week.status === "completed";
     const isInProgress = week.status === "in-progress";
+    const isUpcoming = week.status === "upcoming";
+
+    // Locked if needed, but per request we are just styling 'upcoming' differently
+    // Assuming all are clickable or at least viewable, so removing 'isLocked' logic logic that disables links, 
+    // unless 'upcoming' really means locked. 
+    // User didn't say lock, just change colors. But previously it was locked if not completed/in-progress.
+    // Let's keep link enabled but styled gray.
 
     return (
         <div className="relative h-full">
@@ -275,11 +305,11 @@ function WeekCard({ week, isInstructor, onEdit, onSetCurrent }: { week: any, isI
                 </div>
             )}
 
-            <Link
-                href={isLocked ? "#" : `/weeks/${week.id}`}
-                className={`group relative flex flex-col h-full bg-white rounded-2xl border transition-all duration-300 ${isLocked
-                    ? "border-gray-100 opacity-70"
-                    : "hover:-translate-y-1 hover:shadow-xl hover:border-blue-200 cursor-pointer border-gray-200"
+            <div
+                className={`group relative flex flex-col h-full bg-white rounded-2xl border transition-all duration-300 ${isUpcoming
+                        ? "border-gray-100" // Removed hover effects for purely static feel if desired, though User didn't explicitly ask to remove animations, just page change.
+                        : "border-gray-200"
+                    // Removed hover:-translate-y-1 etc to make it feel static as requested "just for viewing"
                     }`}
             >
                 {isInProgress && (
@@ -291,36 +321,34 @@ function WeekCard({ week, isInstructor, onEdit, onSetCurrent }: { week: any, isI
                     </div>
                 )}
 
-                <div className={`p-6 flex-1 flex flex-col ${isLocked ? "grayscale-[0.5]" : ""}`}>
+                <div className="p-6 flex-1 flex flex-col">
                     <div className="flex justify-between items-start mb-4">
                         <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors ${isCompleted ? "bg-green-100 text-green-600" :
                             isInProgress ? "bg-blue-600 text-white shadow-lg shadow-blue-200" :
-                                "bg-gray-100 text-gray-400"
+                                "bg-gray-100 text-gray-400" // Upcoming: Gray background, Gray Icon
                             }`}>
                             {isCompleted ? <CheckCircle className="w-6 h-6" /> :
                                 isInProgress ? <Clock className="w-6 h-6 animate-pulse" /> :
-                                    <Lock className="w-5 h-5" />}
+                                    <Circle className="w-5 h-5" /> // Upcoming: Circle
+                            }
                         </div>
                         <span className={`px-2 py-1 rounded-md text-xs font-bold uppercase tracking-wider ${isCompleted ? "bg-green-50 text-green-600" :
                             isInProgress ? "bg-blue-50 text-blue-600" :
-                                "bg-gray-100 text-gray-400"
+                                "bg-gray-100 text-gray-600" // Upcoming Badge: Gray bg, Dark Gray text
                             }`}>
                             Week {week.id}
                         </span>
                     </div>
 
-                    <h3 className="font-bold text-xl text-gray-900 mb-2 group-hover:text-blue-600 transition-colors">
+                    <h3 className={`font-bold text-xl mb-2 transition-colors ${isUpcoming ? "text-gray-500" : "text-gray-900 group-hover:text-blue-600"}`}>
                         {week.title}
                     </h3>
                     <p className="text-sm text-gray-400 font-medium mb-3">{week.subtitle}</p>
-                    <p className="text-sm text-gray-500 leading-relaxed mb-6 line-clamp-2">
+                    <p className="text-sm text-gray-400 leading-relaxed mb-6 line-clamp-2">
                         {week.description}
                     </p>
-
-                    {/* Visual Progress Bar (Removed) */}
                 </div>
             </Link>
         </div>
     );
 }
-
