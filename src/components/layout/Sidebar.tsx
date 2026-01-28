@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { BookOpen, Home, List, MessageCircle, Settings, User, LucideIcon, Bell } from "lucide-react";
+import { BookOpen, Home, List, MessageCircle, Settings, User, LucideIcon, Bell, MonitorCloud } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/utils/supabase/client";
 
@@ -57,7 +57,7 @@ export function Sidebar() {
                 <NavItem href="/dashboard" icon={Home} label="대시보드" />
                 <NavItem href="/notices" icon={List} label="공지사항" />
                 <NavItem href="/discussions" icon={MessageCircle} label="자유 게시판" />
-                <NavItem href="/portfolio" icon={User} label="실습 과제" />
+                <NavItem href="/portfolio" icon={MonitorCloud} label="실습 과제" />
                 {userInfo && (
                     <NavItem href="/portfolio?view=my" icon={User} label="나의 포트폴리오" customClass="text-blue-600 hover:text-blue-700 hover:bg-blue-50 font-bold" />
                 )}
