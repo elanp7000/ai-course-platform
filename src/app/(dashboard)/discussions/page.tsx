@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/utils/supabase/client";
 import { Plus, Pencil, Trash2, X, MessageCircle, User as UserIcon } from "lucide-react";
+import CommentSection from "@/components/comments/CommentSection";
 
 interface Discussion {
     id: string;
@@ -145,6 +146,8 @@ export default function DiscussionsPage() {
         return currentUser.id === item.author_id || isInstructor;
     };
 
+    const [viewingDiscussion, setViewingDiscussion] = useState<Discussion | null>(null);
+
     return (
         <div className="h-full flex flex-col max-w-4xl mx-auto w-full">
             {/* Header */}
@@ -156,7 +159,7 @@ export default function DiscussionsPage() {
                     </div>
                     <button
                         onClick={openCreateModal}
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm font-medium"
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-green-600 transition-colors shadow-sm font-medium"
                     >
                         <Plus className="w-5 h-5" />
                         게시물 등록
@@ -165,7 +168,19 @@ export default function DiscussionsPage() {
             </div>
 
             {/* List */}
-            <div className="flex-1 overflow-y-auto px-4 md:px-8 pb-8">
+            <div className="flex-1 overflow-y-auto px-4 md:px-8 pb-8 custom-scrollbar">
+                <style jsx>{`
+                    .custom-scrollbar::-webkit-scrollbar {
+                        width: 6px;
+                    }
+                    .custom-scrollbar::-webkit-scrollbar-track {
+                        background: transparent;
+                    }
+                    .custom-scrollbar::-webkit-scrollbar-thumb {
+                        background-color: #e5e7eb;
+                        border-radius: 20px;
+                    }
+                `}</style>
                 {isLoading ? (
                     <div className="flex justify-center py-20">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -178,14 +193,19 @@ export default function DiscussionsPage() {
                 ) : (
                     <div className="space-y-4">
                         {discussions.map((item) => (
-                            <div key={item.id} className="bg-white rounded-xl border p-6 hover:shadow-md transition-shadow">
+                            <div key={item.id} className="bg-white rounded-xl border p-6 hover:shadow-md transition-shadow group">
                                 <div className="flex justify-between items-start mb-4">
                                     <div className="flex items-start gap-4">
                                         <span className="text-xs px-2 py-1 rounded font-bold shrink-0 bg-green-100 text-green-700 mt-0.5">
                                             질문/토론
                                         </span>
                                         <div>
-                                            <h3 className="text-lg font-bold text-gray-900 mb-1">{item.title}</h3>
+                                            <h3
+                                                className="text-lg font-bold text-gray-900 mb-1 cursor-pointer hover:text-blue-600 transition-colors"
+                                                onClick={() => setViewingDiscussion(item)}
+                                            >
+                                                {item.title}
+                                            </h3>
                                             <div className="flex items-center gap-2 text-sm text-gray-500">
                                                 <span className="font-semibold text-gray-800">
                                                     {item.author_name || item.author_email?.split('@')[0] || '익명'}
@@ -196,7 +216,7 @@ export default function DiscussionsPage() {
                                         </div>
                                     </div>
                                     {canManage(item) && (
-                                        <div className="flex gap-2">
+                                        <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                             <button
                                                 onClick={() => openEditModal(item)}
                                                 className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
@@ -212,8 +232,17 @@ export default function DiscussionsPage() {
                                         </div>
                                     )}
                                 </div>
-                                <div className="prose prose-sm max-w-none text-gray-600 whitespace-pre-wrap">
+                                <div className="prose prose-sm max-w-none text-gray-600 whitespace-pre-wrap line-clamp-3 mb-4">
                                     {item.content}
+                                </div>
+                                <div className="flex justify-end">
+                                    <button
+                                        onClick={() => setViewingDiscussion(item)}
+                                        className="text-sm font-medium text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                                    >
+                                        <MessageCircle className="w-4 h-4" />
+                                        댓글 확인 및 작성
+                                    </button>
                                 </div>
                             </div>
                         ))}
@@ -221,7 +250,7 @@ export default function DiscussionsPage() {
                 )}
             </div>
 
-            {/* Modal */}
+            {/* Create/Edit Modal */}
             {isModalOpen && (
                 <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
                     <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl animate-in fade-in zoom-in-95 duration-200">
@@ -271,6 +300,36 @@ export default function DiscussionsPage() {
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Detail View Modal */}
+            {viewingDiscussion && (
+                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-2xl w-full max-w-3xl max-h-[90vh] shadow-2xl animate-in fade-in zoom-in-95 duration-200 flex flex-col">
+                        <div className="flex justify-between items-start p-6 border-b shrink-0">
+                            <div>
+                                <h2 className="text-2xl font-bold text-gray-900 mb-2">{viewingDiscussion.title}</h2>
+                                <div className="flex items-center gap-2 text-sm text-gray-500">
+                                    <span className="font-semibold text-gray-800">
+                                        {viewingDiscussion.author_name || viewingDiscussion.author_email?.split('@')[0] || '익명'}
+                                    </span>
+                                    <span>•</span>
+                                    <span>{new Date(viewingDiscussion.created_at).toLocaleString()}</span>
+                                </div>
+                            </div>
+                            <button onClick={() => setViewingDiscussion(null)} className="text-gray-400 hover:text-gray-600">
+                                <X className="w-6 h-6" />
+                            </button>
+                        </div>
+                        <div className="p-6 overflow-y-auto flex-1 custom-scrollbar">
+                            <div className="prose prose-blue max-w-none text-gray-800 whitespace-pre-wrap mb-8">
+                                {viewingDiscussion.content}
+                            </div>
+
+                            <CommentSection targetId={viewingDiscussion.id} targetType="discussion" />
+                        </div>
                     </div>
                 </div>
             )}

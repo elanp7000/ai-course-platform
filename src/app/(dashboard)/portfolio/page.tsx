@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, Suspense } from "react";
 import ReactMarkdown from "react-markdown";
 import { supabase } from "@/utils/supabase/client";
 import { Plus, Pencil, Trash2, X, Globe, User, FileCode, Users, FolderInput, ArrowUp, ArrowDown, ExternalLink, MonitorCloud } from "lucide-react";
+import CommentSection from "@/components/comments/CommentSection";
 import { useSearchParams } from "next/navigation";
 
 interface UnifiedItem {
@@ -1003,6 +1004,8 @@ function PortfolioContent() {
                                     </a>
                                 </div>
                             )}
+
+                            <CommentSection targetId={selectedItem.id} targetType={selectedItem.type} />
                         </div>
                         {isOwner(selectedItem) && (
                             <div className="p-4 border-t bg-gray-50 rounded-b-2xl flex justify-end gap-2">
