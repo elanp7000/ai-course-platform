@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, Suspense } from "react";
 import ReactMarkdown from "react-markdown";
 import { supabase } from "@/utils/supabase/client";
-import { Plus, Pencil, Trash2, X, Globe, User, FileCode, Users, FolderInput } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Globe, User, FileCode, Users, FolderInput, ArrowUp, ArrowDown } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 
 interface UnifiedItem {
@@ -23,6 +23,7 @@ interface Topic {
     title: string;
     description: string;
     created_at: string;
+    sort_order?: number;
 }
 
 interface StudentProfile {
@@ -117,7 +118,7 @@ function PortfolioContent() {
         const { data: topicData } = await supabase
             .from('portfolio_topics')
             .select('*')
-            .order('created_at', { ascending: false });
+            .order('sort_order', { ascending: true });
         if (topicData) setTopics(topicData);
 
         let portfolios = [];
@@ -316,6 +317,44 @@ function PortfolioContent() {
         });
         setIsMoveOnly(true);
         setIsModalOpen(true);
+    };
+
+    const handleMoveTopic = async (topic: Topic, direction: 'up' | 'down') => {
+        const currentIndex = topics.findIndex(t => t.id === topic.id);
+        if (currentIndex === -1) return;
+
+        const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+        if (targetIndex < 0 || targetIndex >= topics.length) return;
+
+        const targetTopic = topics[targetIndex];
+
+        // Optimistic Update
+        const newTopics = [...topics];
+        newTopics[currentIndex] = targetTopic;
+        newTopics[targetIndex] = topic;
+        setTopics(newTopics);
+
+        try {
+            const currentOrder = topic.sort_order ?? 0;
+            const targetOrder = targetTopic.sort_order ?? 0;
+
+            // If they are equal (shouldn't happen with proper init), force diff
+            const newCurrentOrder = targetOrder;
+            const newTargetOrder = currentOrder;
+
+            const { error: e1 } = await supabase.from('portfolio_topics').update({ sort_order: newCurrentOrder }).eq('id', topic.id);
+            const { error: e2 } = await supabase.from('portfolio_topics').update({ sort_order: newTargetOrder }).eq('id', targetTopic.id);
+
+            if (e1 || e2) throw new Error("Update failed");
+
+            // Refetch to ensure consistency
+            fetchPortfolios();
+
+        } catch (e) {
+            console.error(e);
+            alert("이동 실패. 새로고침 후 다시 시도해주세요.");
+            fetchPortfolios(); // Revert
+        }
     };
 
     const handleDeleteTopic = async (topicId: string) => {
@@ -656,7 +695,7 @@ function PortfolioContent() {
                     </div>
                 ) : (
                     <div className="space-y-12">
-                        {topics.map(topic => {
+                        {topics.map((topic, index) => {
                             const topicItems = items.filter(item => item.topic_id === topic.id);
 
                             return (
@@ -667,7 +706,27 @@ function PortfolioContent() {
                                             {topic.description && <p className="text-green-50 text-sm mt-1">{topic.description}</p>}
                                         </div>
                                         {userRole === 'instructor' && (
-                                            <div className="flex gap-2 opacity-0 group-hover/topic:opacity-100 transition-opacity">
+                                            <div className="flex gap-1 opacity-0 group-hover/topic:opacity-100 transition-opacity">
+                                                <div className="flex gap-0.5 mr-2 border-r border-white/20 pr-2">
+                                                    {index > 0 && (
+                                                        <button
+                                                            onClick={() => handleMoveTopic(topic, 'up')}
+                                                            className="p-1.5 text-white/80 hover:text-white hover:bg-white/20 rounded-lg transition-colors"
+                                                            title="위로 이동"
+                                                        >
+                                                            <ArrowUp className="w-4 h-4" />
+                                                        </button>
+                                                    )}
+                                                    {index < topics.length - 1 && (
+                                                        <button
+                                                            onClick={() => handleMoveTopic(topic, 'down')}
+                                                            className="p-1.5 text-white/80 hover:text-white hover:bg-white/20 rounded-lg transition-colors"
+                                                            title="아래로 이동"
+                                                        >
+                                                            <ArrowDown className="w-4 h-4" />
+                                                        </button>
+                                                    )}
+                                                </div>
                                                 <button
                                                     onClick={() => openEditTopicModal(topic)}
                                                     className="p-1.5 text-white/80 hover:text-white hover:bg-white/20 rounded-lg transition-colors"

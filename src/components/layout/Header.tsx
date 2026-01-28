@@ -10,21 +10,39 @@ import { User as SupabaseUser } from "@supabase/supabase-js";
 
 export function Header() {
     const [user, setUser] = useState<SupabaseUser | null>(null);
+    const [userInfo, setUserInfo] = useState<{ name: string; role: string } | null>(null);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const router = useRouter();
 
     useEffect(() => {
-        // Check active session
-        supabase.auth.getSession().then(({ data: { session } }) => {
+        const fetchUser = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
             setUser(session?.user ?? null);
-        });
+
+            if (session?.user) {
+                const { data: profile } = await supabase
+                    .from('users')
+                    .select('name, role')
+                    .eq('id', session.user.id)
+                    .single();
+
+                if (profile) {
+                    setUserInfo({
+                        name: profile.name || session.user.email?.split('@')[0] || 'User',
+                        role: profile.role || 'student'
+                    });
+                }
+            }
+        };
+
+        fetchUser();
 
         // Listen for auth changes
         const {
             data: { subscription },
         } = supabase.auth.onAuthStateChange((_event, session) => {
             setUser(session?.user ?? null);
-            router.refresh(); // Refresh current route to update server components if needed
+            router.refresh();
         });
 
         return () => subscription.unsubscribe();
@@ -38,16 +56,18 @@ export function Header() {
     };
 
     return (
-        <header className="h-[88px] bg-white border-b flex items-center justify-between px-6 sticky top-0 z-10">
+        <header className="h-16 bg-white border-b flex items-center justify-between px-6 sticky top-0 z-10">
             <button className="md:hidden p-2 -ml-2 text-gray-600">
                 <Menu className="w-6 h-6" />
             </button>
 
             <div className="flex items-center gap-4 ml-auto">
-                <button className="p-2 text-gray-500 hover:bg-gray-100 rounded-full transition-colors relative">
-                    <Bell className="w-5 h-5" />
-                    {/* <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full" /> */}
-                </button>
+                {/* User Badge Replaced Bell Icon */}
+                {userInfo && (
+                    <span className="rounded-full bg-blue-500 text-white px-3 py-0.5 text-xs font-medium shadow-sm">
+                        {userInfo.role === 'instructor' ? '강사' : userInfo.name}
+                    </span>
+                )}
 
                 {user ? (
                     <div className="relative">

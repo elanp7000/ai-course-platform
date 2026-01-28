@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { BookOpen, Home, List, MessageCircle, Settings, User, LucideIcon } from "lucide-react";
+import { BookOpen, Home, List, MessageCircle, Settings, User, LucideIcon, Bell } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/utils/supabase/client";
 
@@ -41,18 +41,16 @@ export function Sidebar() {
 
     return (
         <aside className="w-64 bg-white border-r h-full flex flex-col hidden md:flex">
-            <div className="h-[88px] border-b flex flex-col items-center justify-center gap-3">
+            <div className="h-16 border-b flex items-center justify-between px-6">
                 <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
                     <BookOpen className="w-6 h-6 text-blue-600" />
                     <span className="font-bold text-xl text-gray-800">
                         AI Course
                     </span>
                 </Link>
-                {userInfo && (
-                    <span className="rounded-full bg-blue-500 text-white px-3 py-0.5 text-xs font-medium shadow-sm">
-                        {userInfo.role === 'instructor' ? '강사' : userInfo.name}
-                    </span>
-                )}
+                <button className="p-2 text-gray-500 hover:bg-gray-100 rounded-full transition-colors relative">
+                    <Bell className="w-5 h-5" />
+                </button>
             </div>
 
             <nav className="flex-1 p-4 space-y-1">
