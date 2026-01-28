@@ -37,21 +37,23 @@ export function Sidebar() {
         return `AI Course ${userInfo.name}`;
     };
 
-    const isLogoTextRed = userInfo?.role === 'instructor';
+    const isInstructor = userInfo?.role === 'instructor';
 
     return (
         <aside className="w-64 bg-white border-r h-full flex flex-col hidden md:flex">
-            <Link href="/" className="h-16 px-6 border-b flex items-center gap-2 hover:bg-gray-50 transition-colors">
-                <BookOpen className={`w-6 h-6 ${isLogoTextRed ? 'text-red-500' : 'text-blue-600'}`} />
-                <span className="font-bold text-xl text-gray-800">
-                    AI Course
-                    {userInfo && (
-                        <span className={`ml-2 text-lg ${isLogoTextRed ? 'text-red-500' : 'text-gray-600'}`}>
-                            {userInfo.role === 'instructor' ? '강사' : userInfo.name}
-                        </span>
-                    )}
-                </span>
-            </Link>
+            <div className="py-6 border-b flex flex-col items-center justify-center gap-3">
+                <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+                    <BookOpen className="w-6 h-6 text-blue-600" />
+                    <span className="font-bold text-xl text-gray-800">
+                        AI Course
+                    </span>
+                </Link>
+                {userInfo && (
+                    <span className="rounded-full bg-blue-500 text-white px-3 py-0.5 text-xs font-medium shadow-sm">
+                        {userInfo.role === 'instructor' ? '강사' : userInfo.name}
+                    </span>
+                )}
+            </div>
 
             <nav className="flex-1 p-4 space-y-1">
                 <NavItem href="/dashboard" icon={Home} label="대시보드" />
@@ -59,7 +61,7 @@ export function Sidebar() {
                 <NavItem href="/discussions" icon={MessageCircle} label="질문·토론" />
                 <NavItem href="/portfolio" icon={User} label="실습 과제" />
                 {userInfo && (
-                    <NavItem href="/portfolio" icon={User} label="나의 포트폴리오" customClass="text-red-500 hover:text-red-600 hover:bg-red-50 font-bold" />
+                    <NavItem href="/portfolio?view=my" icon={User} label="나의 포트폴리오" customClass="text-blue-600 hover:text-blue-700 hover:bg-blue-50 font-bold" />
                 )}
             </nav>
 

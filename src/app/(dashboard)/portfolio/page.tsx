@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, Suspense } from "react";
 import ReactMarkdown from "react-markdown";
 import { supabase } from "@/utils/supabase/client";
 import { Plus, Pencil, Trash2, X, Globe, User, FileCode, Users } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 
 interface PortfolioItem {
     id: string;
@@ -22,7 +23,10 @@ interface StudentProfile {
     avatar_url?: string;
 }
 
-export default function PortfolioPage() {
+function PortfolioContent() {
+    const searchParams = useSearchParams();
+    const isMyView = searchParams.get('view') === 'my';
+
     const [items, setItems] = useState<PortfolioItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [currentUser, setCurrentUser] = useState<any>(null);
@@ -48,14 +52,14 @@ export default function PortfolioPage() {
 
     useEffect(() => {
         checkUserAndInit();
-    }, []);
+    }, [isMyView]); // Re-run when view changes
 
     // Re-fetch items when filter changes (for instructor)
     useEffect(() => {
         if (currentUser) {
             fetchPortfolios();
         }
-    }, [selectedStudentId]); // Depend on selectedStudentId
+    }, [selectedStudentId, currentUser]);
 
     const checkUserAndInit = async () => {
         const { data: { session } } = await supabase.auth.getSession();
@@ -106,21 +110,21 @@ export default function PortfolioPage() {
             .order('created_at', { ascending: false });
 
         // Logic:
-        // If Instructor:
-        //    - If selectedStudentId is set, filter by that student.
-        //    - Else (default), show ALL portfolios.
-        // If Student:
-        //    - Filter by own ID only.
+        // 1. My View: Always filter by MY ID.
+        // 2. Instructor Normal View:
+        //    - Filter by selectedStudentId if set.
+        //    - Else show ALL.
+        // 3. Student Normal View (Experiment Assignments):
+        //    - Show ALL (Community).
 
-        if (role === 'instructor') {
+        if (isMyView) {
+            query = query.eq('user_id', userId);
+        } else if (role === 'instructor') {
             if (selectedStudentId) {
                 query = query.eq('user_id', selectedStudentId);
             }
-            // If no selectedStudentId, fetch all (no filter)
-        } else {
-            // Student: see only own
-            query = query.eq('user_id', userId);
         }
+        // Else: Student Community View -> No Filter (Show All)
 
         const { data, error } = await query;
 
@@ -322,10 +326,22 @@ export default function PortfolioPage() {
         return currentUser && currentUser.id === item.user_id;
     };
 
+    // Render Logic
+    const showInstructorSidebar = userRole === 'instructor' && !isMyView;
+    const pageTitle = isMyView
+        ? "나의 포트폴리오"
+        : (userRole === 'instructor' && selectedStudentId
+            ? `${students.find(s => s.id === selectedStudentId)?.name || '학습자'}의 포트폴리오`
+            : "실습 과제");
+
+    const pageDescription = isMyView
+        ? "내가 작성한 프로젝트들을 모아보세요."
+        : "학습한 결과물을 공유하고 서로 피드백을 주고받으세요.";
+
     return (
         <div className="max-w-7xl mx-auto pb-20 flex min-h-[calc(100vh-4rem)]">
-            {/* Instructor Sidebar (Student List) */}
-            {userRole === 'instructor' && (
+            {/* Instructor Sidebar (Student List) - Only in Shared View */}
+            {showInstructorSidebar && (
                 <div className="w-64 border-r bg-white flex flex-col h-full sticky top-0 overflow-y-auto hidden lg:flex">
                     <div className="p-4 border-b">
                         <h2 className="font-bold text-gray-900 flex items-center gap-2">
@@ -359,16 +375,10 @@ export default function PortfolioPage() {
                 <div className="flex items-center justify-between mb-8">
                     <div>
                         <h1 className="text-3xl font-bold text-gray-900">
-                            {userRole === 'instructor' && selectedStudentId
-                                ? `${students.find(s => s.id === selectedStudentId)?.name || '학습자'}의 포트폴리오`
-                                : "실습 과제"
-                            }
+                            {pageTitle}
                         </h1>
                         <p className="text-gray-500 mt-2">
-                            {userRole === 'instructor'
-                                ? "학습자들의 결과물을 확인하고 피드백을 주세요."
-                                : "나의 학습 결과물을 기록하고 공유하세요."
-                            }
+                            {pageDescription}
                         </p>
                     </div>
 
@@ -608,5 +618,13 @@ export default function PortfolioPage() {
                 </div>
             )}
         </div>
+    );
+}
+
+export default function PortfolioPage() {
+    return (
+        <Suspense fallback={<div className="flex justify-center py-20"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div></div>}>
+            <PortfolioContent />
+        </Suspense>
     );
 }
