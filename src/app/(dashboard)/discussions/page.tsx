@@ -159,7 +159,7 @@ export default function DiscussionsPage() {
                     </div>
                     <button
                         onClick={openCreateModal}
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-green-600 transition-colors shadow-sm font-medium"
+                        className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-sm font-medium"
                     >
                         <Plus className="w-5 h-5" />
                         게시물 등록
