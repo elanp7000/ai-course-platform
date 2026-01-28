@@ -1,12 +1,56 @@
+"use client";
+
 import Link from "next/link";
 import { BookOpen, Home, List, MessageCircle, Settings, User, LucideIcon } from "lucide-react";
+import { useEffect, useState } from "react";
+import { supabase } from "@/utils/supabase/client";
 
 export function Sidebar() {
+    const [userInfo, setUserInfo] = useState<{ name: string; role: string } | null>(null);
+
+    useEffect(() => {
+        const fetchUser = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session?.user) {
+                // Fetch public profile for role and name
+                const { data: profile } = await supabase
+                    .from('users')
+                    .select('name, role')
+                    .eq('id', session.user.id)
+                    .single();
+
+                if (profile) {
+                    setUserInfo({
+                        name: profile.name || session.user.email?.split('@')[0] || 'User',
+                        role: profile.role || 'student'
+                    });
+                }
+            }
+        };
+
+        fetchUser();
+    }, []);
+
+    const getLogoText = () => {
+        if (!userInfo) return "AI Course";
+        if (userInfo.role === 'instructor') return "AI Course 강사";
+        return `AI Course ${userInfo.name}`;
+    };
+
+    const isLogoTextRed = userInfo?.role === 'instructor';
+
     return (
         <aside className="w-64 bg-white border-r h-full flex flex-col hidden md:flex">
             <Link href="/" className="h-16 px-6 border-b flex items-center gap-2 hover:bg-gray-50 transition-colors">
-                <BookOpen className="w-6 h-6 text-blue-600" />
-                <span className="font-bold text-xl text-gray-800">AI Course</span>
+                <BookOpen className={`w-6 h-6 ${isLogoTextRed ? 'text-red-500' : 'text-blue-600'}`} />
+                <span className="font-bold text-xl text-gray-800">
+                    AI Course
+                    {userInfo && (
+                        <span className={`ml-2 text-lg ${isLogoTextRed ? 'text-red-500' : 'text-gray-600'}`}>
+                            {userInfo.role === 'instructor' ? '강사' : userInfo.name}
+                        </span>
+                    )}
+                </span>
             </Link>
 
             <nav className="flex-1 p-4 space-y-1">
@@ -14,6 +58,9 @@ export function Sidebar() {
                 <NavItem href="/notices" icon={List} label="공지사항" />
                 <NavItem href="/discussions" icon={MessageCircle} label="질문·토론" />
                 <NavItem href="/portfolio" icon={User} label="실습 과제" />
+                {userInfo && (
+                    <NavItem href="/portfolio" icon={User} label="나의 포트폴리오" customClass="text-red-500 hover:text-red-600 hover:bg-red-50 font-bold" />
+                )}
             </nav>
 
             <div className="p-4 border-t">
@@ -23,9 +70,9 @@ export function Sidebar() {
     );
 }
 
-function NavItem({ href, icon: Icon, label }: { href: string; icon: LucideIcon; label: string }) {
+function NavItem({ href, icon: Icon, label, customClass }: { href: string; icon: LucideIcon; label: string; customClass?: string }) {
     return (
-        <Link href={href} className="flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 hover:text-blue-600 rounded-lg transition-colors">
+        <Link href={href} className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${customClass || 'text-gray-600 hover:bg-gray-50 hover:text-blue-600'}`}>
             <Icon className="w-5 h-5" />
             <span className="font-medium">{label}</span>
         </Link>
