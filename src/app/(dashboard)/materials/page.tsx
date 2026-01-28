@@ -405,14 +405,14 @@ export default function MaterialsPage() {
                                     </div>
 
                                     <div className="flex items-center gap-2">
-                                        {material.content_url && (
+                                        {material.content_url && ['pdf', 'html'].includes(material.type) && (
                                             <button
                                                 onClick={(e) => {
                                                     e.stopPropagation();
                                                     window.open(material.content_url, '_blank');
                                                 }}
                                                 className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
-                                                title="보기/다운로드"
+                                                title="다운로드"
                                             >
                                                 <Download className="w-5 h-5" />
                                             </button>
