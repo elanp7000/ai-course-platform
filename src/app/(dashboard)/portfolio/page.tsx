@@ -519,7 +519,7 @@ function PortfolioContent() {
                 <div className="p-6 flex-1 flex flex-col">
                     <div className="flex justify-between items-start mb-4">
                         <div className="flex items-center gap-2">
-                            <span className={`text-xs px-2 py-1 rounded font-bold shrink-0 ${isDiscussion ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
+                            <span className={`text-xs px-2 py-1 rounded font-bold shrink-0 ${isDiscussion ? 'bg-green-100 text-green-700' : 'bg-green-100 text-green-700'}`}>
                                 {isDiscussion ? '질문/토론' : '프로젝트'}
                             </span>
                             <div className="flex flex-col">
@@ -673,37 +673,39 @@ function PortfolioContent() {
             )}
 
             <div className={`flex-1 p-8 ${showInstructorSidebar ? 'overflow-y-auto' : ''}`}>
-                <div className="flex items-center justify-between mb-8">
-                    <div>
-                        <h1 className="text-3xl font-bold text-gray-900">
-                            {pageTitle}
-                        </h1>
-                        <p className="text-gray-500 mt-2">
-                            {pageDescription}
-                        </p>
-                    </div>
+                <div className="sticky top-0 z-10 bg-gray-50 pt-2 pb-6">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h1 className="text-3xl font-bold text-gray-900">
+                                {pageTitle}
+                            </h1>
+                            <p className="text-gray-500 mt-2">
+                                {pageDescription}
+                            </p>
+                        </div>
 
-                    {!isMyView && (
-                        <div className="flex gap-3">
-                            {userRole === 'instructor' && (
+                        {!isMyView && (
+                            <div className="flex gap-3">
+                                {userRole === 'instructor' && (
+                                    <button
+                                        onClick={() => openCreateModal('topic')}
+                                        className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-sm font-medium"
+                                    >
+                                        <Plus className="w-5 h-5" />
+                                        과제 추가
+                                    </button>
+                                )}
+
                                 <button
-                                    onClick={() => openCreateModal('topic')}
-                                    className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-sm font-medium"
+                                    onClick={() => openCreateModal('project')}
+                                    className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-sm font-medium"
                                 >
                                     <Plus className="w-5 h-5" />
-                                    과제 추가
+                                    게시물 등록
                                 </button>
-                            )}
-
-                            <button
-                                onClick={() => openCreateModal('project')}
-                                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-sm font-medium"
-                            >
-                                <Plus className="w-5 h-5" />
-                                게시물 등록
-                            </button>
-                        </div>
-                    )}
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 {isLoading ? (

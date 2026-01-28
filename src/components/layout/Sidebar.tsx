@@ -59,14 +59,24 @@ export function Sidebar() {
                         <NavItem href="/dashboard" icon={Home} label="대시보드" />
                         <NavItem href="/notices" icon={List} label="공지사항" />
                         <NavItem href="/materials" icon={Library} label="학습 자료" />
-                        <NavItem href="/discussions" icon={MessageCircle} label="자유 게시판" />
-                        <NavItem href="/portfolio" icon={MonitorCloud} label="실습 과제" />
+                        <NavItem
+                            href="/discussions"
+                            icon={MessageCircle}
+                            label="자유 게시판"
+                            customClass="text-gray-600 hover:bg-green-50 hover:text-green-600 font-medium"
+                        />
+                        <NavItem
+                            href="/portfolio"
+                            icon={MonitorCloud}
+                            label="실습 과제"
+                            customClass="text-gray-600 hover:bg-green-50 hover:text-green-600 font-medium"
+                        />
                         {userInfo && (
                             <NavItem
                                 href="/portfolio?view=my"
                                 icon={User}
                                 label="나의 포트폴리오"
-                                customClass="text-gray-600 hover:bg-gray-50 hover:text-blue-600 font-semibold"
+                                customClass="text-gray-600 hover:bg-orange-50 hover:text-orange-600 font-semibold"
                             />
                         )}
                         {isInstructor && (

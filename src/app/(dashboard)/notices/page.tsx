@@ -172,20 +172,22 @@ export default function NoticesPage() {
 
     return (
         <div className="max-w-4xl mx-auto pb-20">
-            <div className="flex items-center justify-between mb-8">
-                <div>
-                    <h1 className="text-3xl font-bold text-gray-900">공지사항</h1>
-                    <p className="text-gray-500 mt-2">중요한 소식과 업데이트를 확인하세요.</p>
+            <div className="sticky top-0 z-10 bg-gray-50 pt-2 pb-6">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h1 className="text-3xl font-bold text-gray-900">공지사항</h1>
+                        <p className="text-gray-500 mt-2">중요한 소식과 업데이트를 확인하세요.</p>
+                    </div>
+                    {isInstructor && (
+                        <button
+                            onClick={openCreateModal}
+                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm font-medium"
+                        >
+                            <Plus className="w-5 h-5" />
+                            글쓰기
+                        </button>
+                    )}
                 </div>
-                {isInstructor && (
-                    <button
-                        onClick={openCreateModal}
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm font-medium"
-                    >
-                        <Plus className="w-5 h-5" />
-                        글쓰기
-                    </button>
-                )}
             </div>
 
             {isLoading ? (
