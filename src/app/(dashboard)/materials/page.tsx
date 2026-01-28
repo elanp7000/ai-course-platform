@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { Folder, FileText, Download, Search, Plus, X, PlayCircle, Image as ImageIcon, FileCode, BookOpen, Link as LinkIcon, Trash2, Edit2, CheckCircle, Bot, Globe } from "lucide-react";
+import { Folder, FileText, Download, Search, Plus, X, PlayCircle, Image as ImageIcon, FileCode, BookOpen, Link as LinkIcon, Trash2, Edit2, CheckCircle, Bot, Globe, Bold, Type, Palette } from "lucide-react";
 import { supabase } from "@/utils/supabase/client";
 import ReactMarkdown from "react-markdown";
+import remarkBreaks from "remark-breaks";
+import rehypeRaw from "rehype-raw";
 
 type Material = {
     id: string;
@@ -144,6 +146,34 @@ export default function MaterialsPage() {
         }
     };
 
+    const handleMaterialAccess = async (e: React.MouseEvent, material: Material) => {
+        e.stopPropagation();
+        if (!material.content_url) return;
+
+        // For files that should be downloaded (PDF, HTML, Image)
+        if (['pdf', 'html', 'image'].includes(material.type)) {
+            try {
+                const response = await fetch(material.content_url);
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = material.title + (material.type === 'html' ? '.html' : material.type === 'pdf' ? '.pdf' : '.jpg');
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+            } catch (error) {
+                console.error('Download failed:', error);
+                alert('다운로드 중 오류가 발생했습니다.');
+                window.open(material.content_url, '_blank');
+            }
+        } else {
+            // For Links, Videos, etc. -> Open in new tab
+            window.open(material.content_url, '_blank');
+        }
+    };
+
     const handleLinkInsert = () => {
         const url = prompt("링크 주소(URL)를 입력해주세요:");
         if (!url) return;
@@ -153,6 +183,26 @@ export default function MaterialsPage() {
             ...prev,
             description: prev.description + markdown
         }));
+    };
+
+    const insertText = (before: string, after: string = "") => {
+        const textarea = document.querySelector('textarea') as HTMLTextAreaElement;
+        if (!textarea) return;
+
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const text = textarea.value;
+        const selectedText = text.substring(start, end);
+
+        const newText = text.substring(0, start) + before + selectedText + after + text.substring(end);
+
+        setFormData(prev => ({ ...prev, description: newText }));
+
+        // Restore focus and selection
+        setTimeout(() => {
+            textarea.focus();
+            textarea.setSelectionRange(start + before.length, end + before.length);
+        }, 0);
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -407,27 +457,7 @@ export default function MaterialsPage() {
                                     <div className="flex items-center gap-2">
                                         {material.content_url && ['pdf', 'html'].includes(material.type) && (
                                             <button
-                                                onClick={async (e) => {
-                                                    e.stopPropagation();
-                                                    if (!material.content_url) return;
-
-                                                    try {
-                                                        const response = await fetch(material.content_url);
-                                                        const blob = await response.blob();
-                                                        const url = window.URL.createObjectURL(blob);
-                                                        const a = document.createElement('a');
-                                                        a.href = url;
-                                                        a.download = material.title + (material.type === 'html' ? '.html' : '.pdf');
-                                                        document.body.appendChild(a);
-                                                        a.click();
-                                                        window.URL.revokeObjectURL(url);
-                                                        document.body.removeChild(a);
-                                                    } catch (error) {
-                                                        console.error('Download failed:', error);
-                                                        alert('다운로드 중 오류가 발생했습니다.');
-                                                        window.open(material.content_url, '_blank');
-                                                    }
-                                                }}
+                                                onClick={(e) => handleMaterialAccess(e, material)}
                                                 className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
                                                 title="다운로드"
                                             >
@@ -571,7 +601,33 @@ export default function MaterialsPage() {
                                                 className="w-full p-4 border-none outline-none h-48 resize-none text-base"
                                                 placeholder="자료에 대한 상세 설명을 입력하세요. 아래 버튼을 사용하여 이미지, 동영상, 링크를 추가할 수 있습니다."
                                             />
-                                            <div className="bg-gray-50 p-2 flex gap-2 border-t">
+                                            <div className="bg-gray-50 p-2 flex gap-2 border-t flex-wrap items-center">
+                                                {/* Formatting Tools */}
+                                                <div className="flex items-center gap-1 pr-3 border-r border-gray-200 mr-1">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => insertText('**', '**')}
+                                                        className="p-2 text-gray-500 hover:text-gray-900 hover:bg-white rounded-lg transition-colors"
+                                                        title="굵게"
+                                                    >
+                                                        <Bold className="w-4 h-4" />
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => insertText('### ')}
+                                                        className="p-2 text-gray-500 hover:text-gray-900 hover:bg-white rounded-lg transition-colors"
+                                                        title="제목 (크게)"
+                                                    >
+                                                        <Type className="w-4 h-4" />
+                                                    </button>
+                                                    <div className="flex items-center gap-1 ml-1">
+                                                        <button type="button" onClick={() => insertText('<span style="color: #ef4444;">', '</span>')} className="w-5 h-5 rounded-full bg-red-500 hover:ring-2 ring-offset-1 ring-red-300" title="빨강"></button>
+                                                        <button type="button" onClick={() => insertText('<span style="color: #3b82f6;">', '</span>')} className="w-5 h-5 rounded-full bg-blue-500 hover:ring-2 ring-offset-1 ring-blue-300" title="파랑"></button>
+                                                        <button type="button" onClick={() => insertText('<span style="color: #22c55e;">', '</span>')} className="w-5 h-5 rounded-full bg-green-500 hover:ring-2 ring-offset-1 ring-green-300" title="초록"></button>
+                                                    </div>
+                                                </div>
+
+                                                {/* Media Tools */}
                                                 <button
                                                     type="button"
                                                     onClick={() => imageInputRef.current?.click()}
@@ -667,35 +723,35 @@ export default function MaterialsPage() {
                                 {/* Main Content Info */}
                                 {viewingMaterial.content_url && (
                                     <div className="mb-8 p-4 bg-gray-50 rounded-xl border border-gray-100 flex items-center justify-between">
-                                        <div className="flex items-center gap-3">
-                                            <div className="bg-white p-2 rounded-lg border">
-                                                {viewingMaterial.type === 'link' ? <LinkIcon className="w-5 h-5 text-blue-600" /> :
-                                                    viewingMaterial.type === 'pdf' ? <FileText className="w-5 h-5 text-red-600" /> :
-                                                        viewingMaterial.type === 'video' ? <PlayCircle className="w-5 h-5 text-purple-600" /> :
-                                                            viewingMaterial.type === 'ai_tool' ? <Bot className="w-5 h-5 text-indigo-600" /> :
-                                                                <Download className="w-5 h-5 text-gray-600" />}
-                                            </div>
-                                            <div>
-                                                <p className="font-bold text-sm text-gray-900">대표 콘텐츠</p>
-                                                <a href={viewingMaterial.content_url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline truncate max-w-md block">
-                                                    {viewingMaterial.content_url}
-                                                </a>
+                                        <div
+                                            className="flex items-center gap-3 cursor-pointer"
+                                            onClick={(e) => handleMaterialAccess(e, viewingMaterial)}
+                                        >
+                                            <div className="bg-white p-3 rounded-lg border shadow-sm">
+                                                {viewingMaterial.type === 'link' ? <LinkIcon className="w-6 h-6 text-blue-600" /> :
+                                                    viewingMaterial.type === 'pdf' ? <FileText className="w-6 h-6 text-red-600" /> :
+                                                        viewingMaterial.type === 'video' ? <PlayCircle className="w-6 h-6 text-purple-600" /> :
+                                                            viewingMaterial.type === 'html' ? <FileCode className="w-6 h-6 text-orange-600" /> :
+                                                                viewingMaterial.type === 'ai_tool' ? <Bot className="w-6 h-6 text-indigo-600" /> :
+                                                                    <Download className="w-6 h-6 text-gray-600" />}
                                             </div>
                                         </div>
-                                        <a
-                                            href={viewingMaterial.content_url}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition"
+                                        <button
+                                            onClick={(e) => handleMaterialAccess(e, viewingMaterial)}
+                                            className="px-6 py-2.5 bg-blue-600 text-white text-sm font-bold rounded-xl hover:bg-blue-700 transition shadow-sm"
                                         >
-                                            바로가기
-                                        </a>
+                                            {['pdf', 'html', 'image'].includes(viewingMaterial.type) ? "다운로드" : "바로가기"}
+                                        </button>
                                     </div>
                                 )}
 
                                 {/* Markdown Description */}
                                 <div className="prose prose-blue max-w-none">
-                                    <ReactMarkdown components={MarkdownComponents}>
+                                    <ReactMarkdown
+                                        remarkPlugins={[remarkBreaks]}
+                                        rehypePlugins={[rehypeRaw]}
+                                        components={MarkdownComponents}
+                                    >
                                         {viewingMaterial.description || "상세 설명이 없습니다."}
                                     </ReactMarkdown>
                                 </div>
