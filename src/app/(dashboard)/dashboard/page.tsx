@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, BookOpen, CheckCircle, Clock, Lock, Sparkles, Star, Settings, Circle } from "lucide-react";
+import { BookOpen, CheckCircle, Clock, Sparkles, Star, Settings, Circle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/utils/supabase/client";
 
@@ -277,12 +277,6 @@ function WeekCard({ week, isInstructor, onEdit, onSetCurrent }: { week: any, isI
     const isInProgress = week.status === "in-progress";
     const isUpcoming = week.status === "upcoming";
 
-    // Locked if needed, but per request we are just styling 'upcoming' differently
-    // Assuming all are clickable or at least viewable, so removing 'isLocked' logic logic that disables links, 
-    // unless 'upcoming' really means locked. 
-    // User didn't say lock, just change colors. But previously it was locked if not completed/in-progress.
-    // Let's keep link enabled but styled gray.
-
     return (
         <div className="relative h-full">
             {/* Instructor Controls */}
@@ -307,9 +301,8 @@ function WeekCard({ week, isInstructor, onEdit, onSetCurrent }: { week: any, isI
 
             <div
                 className={`group relative flex flex-col h-full bg-white rounded-2xl border transition-all duration-300 ${isUpcoming
-                        ? "border-gray-100" // Removed hover effects for purely static feel if desired, though User didn't explicitly ask to remove animations, just page change.
-                        : "border-gray-200"
-                    // Removed hover:-translate-y-1 etc to make it feel static as requested "just for viewing"
+                    ? "border-gray-100"
+                    : "border-gray-200"
                     }`}
             >
                 {isInProgress && (
@@ -325,16 +318,16 @@ function WeekCard({ week, isInstructor, onEdit, onSetCurrent }: { week: any, isI
                     <div className="flex justify-between items-start mb-4">
                         <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors ${isCompleted ? "bg-green-100 text-green-600" :
                             isInProgress ? "bg-blue-600 text-white shadow-lg shadow-blue-200" :
-                                "bg-gray-100 text-gray-400" // Upcoming: Gray background, Gray Icon
+                                "bg-gray-100 text-gray-400"
                             }`}>
                             {isCompleted ? <CheckCircle className="w-6 h-6" /> :
                                 isInProgress ? <Clock className="w-6 h-6 animate-pulse" /> :
-                                    <Circle className="w-5 h-5" /> // Upcoming: Circle
+                                    <Circle className="w-5 h-5" />
                             }
                         </div>
                         <span className={`px-2 py-1 rounded-md text-xs font-bold uppercase tracking-wider ${isCompleted ? "bg-green-50 text-green-600" :
                             isInProgress ? "bg-blue-50 text-blue-600" :
-                                "bg-gray-100 text-gray-600" // Upcoming Badge: Gray bg, Dark Gray text
+                                "bg-gray-100 text-gray-600"
                             }`}>
                             Week {week.id}
                         </span>
@@ -348,7 +341,7 @@ function WeekCard({ week, isInstructor, onEdit, onSetCurrent }: { week: any, isI
                         {week.description}
                     </p>
                 </div>
-            </Link>
+            </div>
         </div>
     );
 }

@@ -1,7 +1,5 @@
-"use client";
-
 import Link from "next/link";
-import { Bot, Home, List, MessageCircle, Settings, User, LucideIcon, Bell, MonitorCloud, Library } from "lucide-react";
+import { Bot, Home, List, MessageCircle, User, LucideIcon, Bell, MonitorCloud, Library } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/utils/supabase/client";
 

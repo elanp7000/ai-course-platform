@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, Menu, User, LogOut, LogIn, Settings } from "lucide-react";
+import { Menu, User, LogOut, LogIn, Settings } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/utils/supabase/client";
 import Link from "next/link";
