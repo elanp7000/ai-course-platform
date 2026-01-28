@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { Folder, FileText, Download, Search, Plus, X, PlayCircle, Image as ImageIcon, FileCode, BookOpen, Link as LinkIcon, Trash2, Edit2, CheckCircle, Bot, Globe, Bold, Type, Palette } from "lucide-react";
+import { Folder, FileText, Download, Search, Plus, X, PlayCircle, Image as ImageIcon, FileCode, BookOpen, Link as LinkIcon, Trash2, Edit2, CheckCircle, Bot, Globe, Bold, Type, Palette, ArrowUp, ArrowDown } from "lucide-react";
 import { supabase } from "@/utils/supabase/client";
 import ReactMarkdown from "react-markdown";
 import remarkBreaks from "remark-breaks";
@@ -15,6 +15,7 @@ type Material = {
     content_url?: string;
     description?: string;
     created_at: string;
+    sort_order: number;
     weeks?: { title: string, week_number: number }; // Joined data
 };
 
@@ -91,6 +92,7 @@ export default function MaterialsPage() {
                     week_number
                 )
             `)
+            .order('sort_order', { ascending: true })
             .order('created_at', { ascending: false });
 
         if (materialsData) {
@@ -262,6 +264,41 @@ export default function MaterialsPage() {
         });
         setFile(null);
         setIsAdding(true);
+    };
+
+    const handleMoveMaterial = async (id: string, direction: 'up' | 'down', e: React.MouseEvent) => {
+        e.stopPropagation();
+
+        const currentIndex = filteredMaterials.findIndex(m => m.id === id);
+        if (currentIndex === -1) return;
+
+        const currentItem = filteredMaterials[currentIndex];
+        const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+
+        if (targetIndex < 0 || targetIndex >= filteredMaterials.length) return;
+        const targetItem = filteredMaterials[targetIndex];
+
+        // Optimistic update
+        const newMaterials = [...materials];
+        const m1 = newMaterials.find(m => m.id === currentItem.id);
+        const m2 = newMaterials.find(m => m.id === targetItem.id);
+
+        if (m1 && m2) {
+            const tempOrder = m1.sort_order;
+            m1.sort_order = m2.sort_order;
+            m2.sort_order = tempOrder;
+            setMaterials(newMaterials); // Re-render immediately
+
+            // DB Update
+            const { error: error1 } = await supabase.from('materials').update({ sort_order: m1.sort_order }).eq('id', m1.id);
+            const { error: error2 } = await supabase.from('materials').update({ sort_order: m2.sort_order }).eq('id', m2.id);
+
+            if (error1 || error2) {
+                console.error("Reorder failed", error1, error2);
+                alert("순서 변경 중 오류가 발생했습니다.");
+                fetchData(); // Revert on error
+            }
+        }
     };
 
     const handleDeleteClick = async (id: string, e: React.MouseEvent) => {
@@ -441,15 +478,12 @@ export default function MaterialsPage() {
                                                 <span className="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
                                                     Week {material.weeks?.week_number || "?"}
                                                 </span>
-                                                <span className="text-xs text-gray-400">
-                                                    {new Date(material.created_at).toLocaleDateString()}
-                                                </span>
                                             </div>
                                             <h3 className="font-bold text-gray-900 truncate">
                                                 {material.title}
                                             </h3>
                                             <p className="text-sm text-gray-500 truncate max-w-xl">
-                                                {material.description?.replace(/!\[.*?\]\(.*?\)/g, '[이미지]').replace(/\[.*?\]\(.*?\)/g, '[링크]') || material.content_url}
+                                                {material.description?.replace(/(\*\*|__)(.*?)\1/g, '$2').replace(/(#+)(.*)/g, '$2').replace(/!\[.*?\]\(.*?\)/g, '[이미지]').replace(/\[.*?\]\(.*?\)/g, '[링크]') || material.content_url}
                                             </p>
                                         </div>
                                     </div>
@@ -466,6 +500,14 @@ export default function MaterialsPage() {
                                         )}
                                         {isInstructor && (
                                             <>
+                                                <div className="flex flex-col gap-1 mr-2">
+                                                    <button onClick={(e) => handleMoveMaterial(material.id, 'up', e)} className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors" title="위로 이동">
+                                                        <ArrowUp className="w-4 h-4" />
+                                                    </button>
+                                                    <button onClick={(e) => handleMoveMaterial(material.id, 'down', e)} className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors" title="아래로 이동">
+                                                        <ArrowDown className="w-4 h-4" />
+                                                    </button>
+                                                </div>
                                                 <button onClick={(e) => handleEditClick(material, e)} className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-full transition-colors">
                                                     <Edit2 className="w-5 h-5" />
                                                 </button>
@@ -614,7 +656,7 @@ export default function MaterialsPage() {
                                                     </button>
                                                     <button
                                                         type="button"
-                                                        onClick={() => insertText('### ')}
+                                                        onClick={() => insertText('<span style="font-size: 1.5em; font-weight: bold;">', '</span>')}
                                                         className="p-2 text-gray-500 hover:text-gray-900 hover:bg-white rounded-lg transition-colors"
                                                         title="제목 (크게)"
                                                     >
@@ -711,7 +753,6 @@ export default function MaterialsPage() {
                                         )}
                                     </div>
                                     <h2 className="text-2xl font-bold text-gray-900">{viewingMaterial.title}</h2>
-                                    <p className="text-gray-400 text-sm mt-1">{new Date(viewingMaterial.created_at).toLocaleString()}</p>
                                 </div>
                                 <button onClick={() => setViewingMaterial(null)} className="text-gray-400 hover:text-gray-600">
                                     <X className="w-6 h-6" />

@@ -18,6 +18,7 @@ interface UnifiedItem {
     type: 'portfolio' | 'discussion';
     topic_id?: string;
     comment_count?: number;
+    author_role?: string;
 }
 
 interface Topic {
@@ -130,7 +131,7 @@ function PortfolioContent() {
         // 1. Fetch Portfolios
         let portfolioQuery = supabase
             .from('portfolios')
-            .select('*, comments(id)')
+            .select('*, comments(id), users(role)')
             .order('created_at', { ascending: false });
 
         if (isMyView) {
@@ -142,14 +143,19 @@ function PortfolioContent() {
         }
 
         const { data: pData, error: pError } = await portfolioQuery;
-        if (pData) portfolios = pData.map(p => ({ ...p, type: 'portfolio', comment_count: p.comments?.length || 0 }));
+        if (pData) portfolios = pData.map((p: any) => ({
+            ...p,
+            type: 'portfolio',
+            comment_count: p.comments?.length || 0,
+            author_role: p.users?.role
+        }));
         if (pError) console.error("Error fetching portfolios:", pError);
 
         // 2. Fetch Discussions (ONLY if isMyView)
         if (isMyView) {
             let discussionQuery = supabase
                 .from('discussions')
-                .select('*, comments(id)')
+                .select('*, comments(id), users!author_id(role)')
                 .order('created_at', { ascending: false });
 
             let targetUserId = userId;
@@ -169,7 +175,8 @@ function PortfolioContent() {
                     user_id: d.author_id,
                     author_name: d.author_name,
                     type: 'discussion',
-                    comment_count: d.comments?.length || 0
+                    comment_count: d.comments?.length || 0,
+                    author_role: (d.users as any)?.role
                 }));
             }
             if (dError) console.error("Error fetching discussions:", dError);
@@ -596,7 +603,7 @@ function PortfolioContent() {
 
                     <div className="pt-4 border-t flex items-center justify-between">
                         <span className="text-xs text-gray-400">
-                            {new Date(item.created_at).toLocaleDateString()}
+                            {item.author_role !== 'instructor' && new Date(item.created_at).toLocaleDateString()}
                         </span>
                         <div className="flex items-center gap-2">
                             {(item.comment_count || 0) > 0 && (
