@@ -318,6 +318,35 @@ function PortfolioContent() {
         setIsModalOpen(true);
     };
 
+    const handleDeleteTopic = async (topicId: string) => {
+        if (!confirm("정말 이 주제를 삭제하시겠습니까?\n포함된 프로젝트는 '미분류'로 이동됩니다.")) return;
+
+        const { error } = await supabase
+            .from('portfolio_topics')
+            .delete()
+            .eq('id', topicId);
+
+        if (error) {
+            alert("삭제 실패: " + error.message);
+        } else {
+            alert("삭제되었습니다.");
+            fetchPortfolios();
+        }
+    };
+
+    const openEditTopicModal = (topic: Topic) => {
+        setEditingId(topic.id);
+        setFormData({
+            title: topic.title,
+            description: topic.description || "",
+            project_url: "",
+            topic_id: ""
+        });
+        setIsTopicModal(true);
+        setIsMoveOnly(false);
+        setIsModalOpen(true);
+    };
+
     const openCreateModal = (type: 'topic' | 'project') => {
         if (!currentUser) return alert("로그인이 필요합니다.");
         setEditingId(null);
@@ -339,24 +368,38 @@ function PortfolioContent() {
         e.preventDefault();
         if (!currentUser) return alert("로그인이 필요합니다.");
 
-        // Topic Creation Logic
+        // Topic Creation/Update Logic
         if (isTopicModal) {
             if (!formData.title.trim()) return alert("주제 제목을 입력해주세요.");
 
             try {
-                const { error } = await supabase
-                    .from('portfolio_topics')
-                    .insert([{
-                        title: formData.title,
-                        description: formData.description
-                    }]);
+                if (editingId) {
+                    const { error } = await supabase
+                        .from('portfolio_topics')
+                        .update({
+                            title: formData.title,
+                            description: formData.description
+                        })
+                        .eq('id', editingId);
 
-                if (error) throw error;
-                alert("과제(주제)가 등록되었습니다.");
+                    if (error) throw error;
+                    alert("수정되었습니다.");
+                } else {
+                    const { error } = await supabase
+                        .from('portfolio_topics')
+                        .insert([{
+                            title: formData.title,
+                            description: formData.description
+                        }]);
+
+                    if (error) throw error;
+                    alert("과제(주제)가 등록되었습니다.");
+                }
+
                 closeModal();
                 fetchPortfolios();
             } catch (error: any) {
-                alert("등록 실패: " + error.message);
+                alert("작업 실패: " + error.message);
             }
             return;
         }
@@ -589,7 +632,7 @@ function PortfolioContent() {
                                 className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm font-medium"
                             >
                                 <Plus className="w-5 h-5" />
-                                프로젝트 추가
+                                게시물 등록
                             </button>
                         </div>
                     )}
@@ -618,11 +661,29 @@ function PortfolioContent() {
 
                             return (
                                 <section key={topic.id} className="space-y-6">
-                                    <div className="bg-gradient-to-r from-green-600 to-green-500 text-white px-6 py-4 rounded-xl shadow-md flex justify-between items-center">
+                                    <div className="bg-gradient-to-r from-green-600 to-green-500 text-white px-6 py-4 rounded-xl shadow-md flex justify-between items-center group/topic">
                                         <div>
                                             <h2 className="text-xl font-bold text-white">{topic.title}</h2>
                                             {topic.description && <p className="text-green-50 text-sm mt-1">{topic.description}</p>}
                                         </div>
+                                        {userRole === 'instructor' && (
+                                            <div className="flex gap-2 opacity-0 group-hover/topic:opacity-100 transition-opacity">
+                                                <button
+                                                    onClick={() => openEditTopicModal(topic)}
+                                                    className="p-1.5 text-white/80 hover:text-white hover:bg-white/20 rounded-lg transition-colors"
+                                                    title="주제 수정"
+                                                >
+                                                    <Pencil className="w-4 h-4" />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDeleteTopic(topic.id)}
+                                                    className="p-1.5 text-white/80 hover:text-red-200 hover:bg-white/20 rounded-lg transition-colors"
+                                                    title="주제 삭제"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        )}
                                     </div>
                                     {topicItems.length > 0 ? (
                                         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -662,7 +723,7 @@ function PortfolioContent() {
                         <div className="flex justify-between items-center p-6 border-b">
                             <h2 className="text-xl font-bold">
                                 {isTopicModal
-                                    ? "새 과제(주제) 등록"
+                                    ? (editingId ? "과제(주제) 수정" : "새 과제(주제) 등록")
                                     : (isMoveOnly ? "과제 주제 이동"
                                         : (editingId ? "프로젝트 수정" : "새 프로젝트 추가"))}
                             </h2>
