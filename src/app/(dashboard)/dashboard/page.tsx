@@ -110,6 +110,15 @@ export default function DashboardPage() {
 
     const isInstructor = userRole === 'instructor';
     const currentWeek = weeks.find(w => w.is_current);
+
+    // Calculate Progress
+    const totalWeeks = weeks.length || 16;
+    const currentWeekNum = currentWeek ? currentWeek.id : 0;
+    // If no current week, maybe course hasn't started (0%) or finished (100%)? 
+    // For now, let's assume if we have weeks but no current, it might be 0 unless we track 'completed' explicitly.
+    // Simpler logic: (currentWeek / total) * 100
+    const progressPercent = Math.round((currentWeekNum / totalWeeks) * 100);
+
     const displayName = user?.user_metadata?.full_name
         ? user.user_metadata.full_name + "님"
         : user?.email
@@ -119,41 +128,44 @@ export default function DashboardPage() {
     return (
         <div className="space-y-10 pb-10">
             {/* Hero Section */}
-            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-blue-600 to-indigo-700 text-white shadow-xl">
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-700 text-white shadow-lg">
                 <div className="absolute top-0 right-0 -mr-20 -mt-20 w-96 h-96 bg-white/10 rounded-full blur-3xl pointer-events-none"></div>
                 <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-80 h-80 bg-blue-400/20 rounded-full blur-3xl pointer-events-none"></div>
 
-                <div className="relative p-8 md:p-12">
-                    <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
-                        <div className="space-y-4 max-w-2xl">
-                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/30 border border-blue-400/30 text-sm font-medium backdrop-blur-sm">
-                                <Sparkles className="w-4 h-4 text-blue-200" />
+                <div className="relative p-6 md:p-8">
+                    <div className="flex flex-col md:flex-row justify-between items-center gap-6">
+                        <div className="space-y-2 max-w-3xl">
+                            <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-blue-500/30 border border-blue-400/30 text-xs font-medium backdrop-blur-sm mb-1">
+                                <Sparkles className="w-3 h-3 text-blue-200" />
                                 <span>AI Course Platform</span>
                             </div>
-                            <h1 className="text-3xl md:text-5xl font-bold leading-tight">
+                            <h1 className="text-2xl md:text-3xl font-bold leading-tight">
                                 {loading ? (
-                                    <span className="animate-pulse bg-white/20 rounded h-12 w-64 block"></span>
+                                    <span className="animate-pulse bg-white/20 rounded h-8 w-64 block"></span>
                                 ) : (
-                                    <>
-                                        안녕하세요, {displayName}! <br />
-                                        <span className="text-blue-200">AI 마스터 여정</span>을 계속해볼까요?
-                                    </>
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <span>안녕하세요, {displayName}!</span>
+                                        <span className="text-blue-200">AI 마스터 여정을 계속해볼까요?</span>
+                                    </div>
                                 )}
                             </h1>
-                            <p className="text-blue-100 text-lg md:text-xl max-w-lg">
+                            <p className="text-blue-100 text-sm md:text-base">
                                 16주간의 커리큘럼을 통해 AI 도구 활용 마스터가 되어보세요.
                             </p>
                         </div>
 
-                        <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20 w-full md:w-auto min-w-[300px]">
+                        <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20 w-full md:w-auto min-w-[280px]">
                             <div className="flex justify-between items-center mb-2">
-                                <span className="text-sm font-medium text-blue-100">현재 진행률</span>
-                                <span className="text-2xl font-bold">15%</span>
+                                <span className="text-xs font-medium text-blue-100">현재 진행률</span>
+                                <span className="text-xl font-bold">{progressPercent}%</span>
                             </div>
-                            <div className="w-full bg-black/20 rounded-full h-3 mb-2 overflow-hidden">
-                                <div className="bg-white h-full rounded-full w-[15%] shadow-[0_0_10px_rgba(255,255,255,0.5)]"></div>
+                            <div className="w-full bg-black/20 rounded-full h-2.5 mb-2 overflow-hidden">
+                                <div
+                                    className="bg-white h-full rounded-full shadow-[0_0_10px_rgba(255,255,255,0.5)] transition-all duration-1000 ease-out"
+                                    style={{ width: `${progressPercent}%` }}
+                                ></div>
                             </div>
-                            <p className="text-xs text-blue-200 text-right">
+                            <p className="text-[10px] text-blue-200 text-right">
                                 {currentWeek ? `${currentWeek.id}주차 학습 진행 중` : "학습 준비 중"}
                             </p>
                         </div>
