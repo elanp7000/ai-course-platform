@@ -6,14 +6,23 @@ import { supabase } from "@/utils/supabase/client";
 import { Plus, Pencil, Trash2, X, Globe, User, FileCode, Users } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 
-interface PortfolioItem {
+interface UnifiedItem {
     id: string;
     title: string;
     description: string;
-    project_url: string;
+    project_url?: string;
     created_at: string;
     user_id: string;
     author_name?: string;
+    type: 'portfolio' | 'discussion';
+    topic_id?: string;
+}
+
+interface Topic {
+    id: string;
+    title: string;
+    description: string;
+    created_at: string;
 }
 
 interface StudentProfile {
@@ -27,7 +36,8 @@ function PortfolioContent() {
     const searchParams = useSearchParams();
     const isMyView = searchParams.get('view') === 'my';
 
-    const [items, setItems] = useState<PortfolioItem[]>([]);
+    const [items, setItems] = useState<UnifiedItem[]>([]);
+    const [topics, setTopics] = useState<Topic[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [currentUser, setCurrentUser] = useState<any>(null);
     const [userRole, setUserRole] = useState<'student' | 'instructor' | null>(null);
@@ -38,11 +48,12 @@ function PortfolioContent() {
 
     // Modal State
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isTopicModal, setIsTopicModal] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
-    const [formData, setFormData] = useState({ title: "", description: "", project_url: "" });
+    const [formData, setFormData] = useState({ title: "", description: "", project_url: "", topic_id: "" });
 
     // Detail Modal State
-    const [selectedItem, setSelectedItem] = useState<PortfolioItem | null>(null);
+    const [selectedItem, setSelectedItem] = useState<UnifiedItem | null>(null);
 
     // File Upload State
     const [isUploading, setIsUploading] = useState(false);
@@ -52,9 +63,8 @@ function PortfolioContent() {
 
     useEffect(() => {
         checkUserAndInit();
-    }, [isMyView]); // Re-run when view changes
+    }, [isMyView]);
 
-    // Re-fetch items when filter changes (for instructor)
     useEffect(() => {
         if (currentUser) {
             fetchPortfolios();
@@ -66,7 +76,6 @@ function PortfolioContent() {
         if (session?.user) {
             setCurrentUser(session.user);
 
-            // Fetch role
             const { data: profile } = await supabase
                 .from('users')
                 .select('role')
@@ -76,10 +85,8 @@ function PortfolioContent() {
             const role = profile?.role || 'student';
             setUserRole(role);
 
-            // Fetch initial data
             await fetchPortfolios(session.user.id, role);
 
-            // If instructor, fetch student list
             if (role === 'instructor') {
                 fetchStudentList();
             }
@@ -92,7 +99,7 @@ function PortfolioContent() {
         const { data, error } = await supabase
             .from('users')
             .select('*')
-            .eq('role', 'student') // Or just all users if you want to see other instructors too
+            .eq('role', 'student')
             .order('name');
 
         if (!error && data) {
@@ -104,45 +111,78 @@ function PortfolioContent() {
         if (!userId) return;
 
         setIsLoading(true);
-        let query = supabase
+
+        // Fetch Topics
+        const { data: topicData } = await supabase
+            .from('portfolio_topics')
+            .select('*')
+            .order('created_at', { ascending: false });
+        if (topicData) setTopics(topicData);
+
+        let portfolios = [];
+        let discussions: UnifiedItem[] = [];
+
+        // 1. Fetch Portfolios
+        let portfolioQuery = supabase
             .from('portfolios')
             .select('*')
             .order('created_at', { ascending: false });
 
-        // Logic:
-        // 1. My View (Personal):
-        //    - Instructor:
-        //      - If selectedStudentId -> Show that student's work
-        //      - Else -> Show MY work
-        //    - Student: Show MY work
-        // 2. Shared View (Community):
-        //    - Show ALL (No filter)
-
         if (isMyView) {
             if (role === 'instructor' && selectedStudentId) {
-                query = query.eq('user_id', selectedStudentId);
+                portfolioQuery = portfolioQuery.eq('user_id', selectedStudentId);
             } else {
-                query = query.eq('user_id', userId);
+                portfolioQuery = portfolioQuery.eq('user_id', userId);
             }
         }
-        // Else: Shared View -> Show All
 
-        const { data, error } = await query;
+        const { data: pData, error: pError } = await portfolioQuery;
+        if (pData) portfolios = pData.map(p => ({ ...p, type: 'portfolio' }));
+        if (pError) console.error("Error fetching portfolios:", pError);
 
-        if (error) console.error("Error fetching portfolios:", error);
-        else setItems(data || []);
+        // 2. Fetch Discussions (ONLY if isMyView)
+        if (isMyView) {
+            let discussionQuery = supabase
+                .from('discussions')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            let targetUserId = userId;
+            if (role === 'instructor' && selectedStudentId) {
+                targetUserId = selectedStudentId;
+            }
+
+            discussionQuery = discussionQuery.eq('author_id', targetUserId);
+
+            const { data: dData, error: dError } = await discussionQuery;
+            if (dData) {
+                discussions = dData.map(d => ({
+                    id: d.id,
+                    title: d.title,
+                    description: d.content,
+                    created_at: d.created_at,
+                    user_id: d.author_id,
+                    author_name: d.author_name,
+                    type: 'discussion'
+                }));
+            }
+            if (dError) console.error("Error fetching discussions:", dError);
+        }
+
+        // 3. Merge & Sort
+        const combined = [...portfolios, ...discussions].sort((a, b) =>
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
+
+        setItems(combined);
         setIsLoading(false);
     };
 
     const extractFirstMedia = (markdown: string): { type: 'image' | 'video', url: string } | null => {
-        // Check for Image
         const imageMatch = markdown.match(/!\[.*?\]\((.*?)\)/);
         if (imageMatch) return { type: 'image', url: imageMatch[1] };
-
-        // Check for Video (simple link check)
         const videoMatch = markdown.match(/\[.*?\]\((.*?\.(?:mp4|webm|ogg|mov))\)/i);
         if (videoMatch) return { type: 'video', url: videoMatch[1] };
-
         return null;
     };
 
@@ -225,19 +265,87 @@ function PortfolioContent() {
     const handleLinkInsert = () => {
         const url = prompt("링크 주소(URL)를 입력해주세요:");
         if (!url) return;
-
         const text = prompt("링크 텍스트를 입력해주세요 (선택사항):") || "링크";
         const markdown = `\n[${text}](${url})\n`;
-
         setFormData(prev => ({
             ...prev,
             description: prev.description + markdown
         }));
     };
 
+    const handleDelete = async (e: React.MouseEvent, item: UnifiedItem) => {
+        e.stopPropagation();
+        if (!confirm("정말 삭제하시겠습니까?")) return;
+        const table = item.type === 'discussion' ? 'discussions' : 'portfolios';
+        const { error } = await supabase
+            .from(table)
+            .delete()
+            .eq('id', item.id);
+        if (error) {
+            alert("삭제 실패: " + error.message);
+        } else {
+            fetchPortfolios();
+        }
+    };
+
+    const openEditModal = (e: React.MouseEvent, item: UnifiedItem) => {
+        e.stopPropagation();
+        if (item.type === 'discussion') {
+            alert("질문/토론 수정은 '질문/토론' 메뉴에서 가능합니다.");
+            return;
+        }
+        setEditingId(item.id);
+        setFormData({
+            title: item.title,
+            description: item.description,
+            project_url: item.project_url || "",
+            topic_id: item.topic_id || ""
+        });
+        setIsModalOpen(true);
+    };
+
+    const openCreateModal = (type: 'topic' | 'project') => {
+        if (!currentUser) return alert("로그인이 필요합니다.");
+        setEditingId(null);
+        setFormData({ title: "", description: "", project_url: "", topic_id: "" });
+        setIsTopicModal(type === 'topic');
+        setIsModalOpen(true);
+    };
+
+    const closeModal = () => {
+        setIsModalOpen(false);
+        setIsTopicModal(false);
+        setEditingId(null);
+        setFormData({ title: "", description: "", project_url: "", topic_id: "" });
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!currentUser) return alert("로그인이 필요합니다.");
+
+        // Topic Creation Logic
+        if (isTopicModal) {
+            if (!formData.title.trim()) return alert("주제 제목을 입력해주세요.");
+
+            try {
+                const { error } = await supabase
+                    .from('portfolio_topics')
+                    .insert([{
+                        title: formData.title,
+                        description: formData.description
+                    }]);
+
+                if (error) throw error;
+                alert("과제(주제)가 등록되었습니다.");
+                closeModal();
+                fetchPortfolios();
+            } catch (error: any) {
+                alert("등록 실패: " + error.message);
+            }
+            return;
+        }
+
+        // Project Creation Logic
         if (!formData.description.trim()) return;
 
         const generatedTitle = formData.description.length > 20
@@ -251,10 +359,9 @@ function PortfolioContent() {
                 const { error } = await supabase
                     .from('portfolios')
                     .update({
-                        title: generatedTitle,
                         description: formData.description,
                         project_url: formData.project_url,
-                        author_name: authorName
+                        topic_id: formData.topic_id || null
                     })
                     .eq('id', editingId);
 
@@ -268,7 +375,8 @@ function PortfolioContent() {
                         description: formData.description,
                         project_url: formData.project_url,
                         user_id: currentUser.id,
-                        author_name: authorName
+                        author_name: authorName,
+                        topic_id: formData.topic_id || null
                     }]);
 
                 if (error) throw error;
@@ -276,58 +384,108 @@ function PortfolioContent() {
             }
 
             closeModal();
-            fetchPortfolios(); // Refresh list
+            fetchPortfolios();
         } catch (error: any) {
             console.error("Error saving portfolio:", error);
             alert("저장 실패: " + error.message);
         }
     };
 
-    const handleDelete = async (e: React.MouseEvent, id: string) => {
-        e.stopPropagation();
-        if (!confirm("정말 삭제하시겠습니까?")) return;
-
-        const { error } = await supabase
-            .from('portfolios')
-            .delete()
-            .eq('id', id);
-
-        if (error) {
-            alert("삭제 실패: " + error.message);
-        } else {
-            fetchPortfolios();
-        }
-    };
-
-    const openCreateModal = () => {
-        if (!currentUser) return alert("로그인이 필요합니다.");
-        setEditingId(null);
-        setFormData({ title: "", description: "", project_url: "" });
-        setIsModalOpen(true);
-    };
-
-    const openEditModal = (e: React.MouseEvent, item: PortfolioItem) => {
-        e.stopPropagation();
-        setEditingId(item.id);
-        setFormData({
-            title: item.title,
-            description: item.description,
-            project_url: item.project_url
-        });
-        setIsModalOpen(true);
-    };
-
-    const closeModal = () => {
-        setIsModalOpen(false);
-        setEditingId(null);
-        setFormData({ title: "", description: "", project_url: "" });
-    };
-
-    const isOwner = (item: PortfolioItem) => {
+    const isOwner = (item: UnifiedItem) => {
         return currentUser && currentUser.id === item.user_id;
     };
 
-    // Render Logic
+    const renderCard = (item: UnifiedItem) => {
+        const firstMedia = extractFirstMedia(item.description);
+        const isDiscussion = item.type === 'discussion';
+
+        return (
+            <div
+                key={item.id}
+                onClick={() => setSelectedItem(item)}
+                className={`bg-white rounded-xl border hover:shadow-lg transition-all group flex flex-col h-full cursor-pointer overflow-hidden ${isDiscussion ? 'border-l-4 border-l-green-500' : ''}`}
+            >
+                <div className="p-6 flex-1 flex flex-col">
+                    <div className="flex justify-between items-start mb-4">
+                        <div className="flex items-center gap-2">
+                            <div className={`${isDiscussion ? 'bg-green-100' : 'bg-blue-100'} p-1.5 rounded-full`}>
+                                {isDiscussion ? (
+                                    <Users className={`w-4 h-4 ${isDiscussion ? 'text-green-600' : 'text-blue-600'}`} />
+                                ) : (
+                                    <User className="w-4 h-4 text-blue-600" />
+                                )}
+                            </div>
+                            <div className="flex flex-col">
+                                <h3 className="text-lg font-bold text-gray-900 line-clamp-1">
+                                    {item.title || item.author_name}
+                                </h3>
+                                <span className={`text-xs px-1.5 py-0.5 rounded w-fit ${isDiscussion ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
+                                    {isDiscussion ? '질문/토론' : '프로젝트'}
+                                </span>
+                            </div>
+                        </div>
+                        {isOwner(item) && (
+                            <div className="flex gap-1 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button
+                                    onClick={(e) => openEditModal(e, item)}
+                                    className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded"
+                                >
+                                    <Pencil className="w-4 h-4" />
+                                </button>
+                                <button
+                                    onClick={(e) => handleDelete(e, item)}
+                                    className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                </button>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="flex-1 mb-4 h-48 bg-gray-50 rounded-lg overflow-hidden relative flex items-center justify-center">
+                        {firstMedia && !isDiscussion ? (
+                            firstMedia.type === 'video' ? (
+                                <video
+                                    src={firstMedia.url}
+                                    className="w-full h-full object-cover"
+                                    muted
+                                    onMouseOver={e => (e.target as HTMLVideoElement).play()}
+                                    onMouseOut={e => (e.target as HTMLVideoElement).pause()}
+                                />
+                            ) : (
+                                <img
+                                    src={firstMedia.url}
+                                    alt="Project Preview"
+                                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                                />
+                            )
+                        ) : (
+                            <div className="w-full h-full p-4 overflow-hidden text-sm text-gray-500 prose-sm prose-p:my-0">
+                                <div className="line-clamp-[8] break-words whitespace-pre-wrap">
+                                    {item.description}
+                                </div>
+                            </div>
+                        )}
+                        {firstMedia?.type === 'video' && !isDiscussion && (
+                            <div className="absolute top-2 right-2 bg-black/50 text-white p-1.5 rounded-full">
+                                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="pt-4 border-t flex items-center justify-between">
+                        <span className="text-xs text-gray-400">
+                            {new Date(item.created_at).toLocaleDateString()}
+                        </span>
+                        <span className="text-xs text-gray-500 font-medium">
+                            {item.author_name || "익명"}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
     const showInstructorSidebar = userRole === 'instructor' && isMyView;
     const pageTitle = isMyView
         ? "나의 포트폴리오"
@@ -341,7 +499,6 @@ function PortfolioContent() {
 
     return (
         <div className="max-w-7xl mx-auto pb-20 flex min-h-[calc(100vh-4rem)]">
-            {/* Instructor Sidebar (Student List) - Only in Shared View */}
             {showInstructorSidebar && (
                 <div className="w-64 border-r bg-white flex flex-col h-full sticky top-0 overflow-y-auto hidden lg:flex">
                     <div className="p-4 border-b">
@@ -371,7 +528,6 @@ function PortfolioContent() {
                 </div>
             )}
 
-            {/* Main Content */}
             <div className="flex-1 p-8">
                 <div className="flex items-center justify-between mb-8">
                     <div>
@@ -383,13 +539,11 @@ function PortfolioContent() {
                         </p>
                     </div>
 
-                    {/* Buttons: Only visible in Shared View */}
                     {!isMyView && (
                         <div className="flex gap-3">
-                            {/* Instructor Only: Add Assignment */}
                             {userRole === 'instructor' && (
                                 <button
-                                    onClick={openCreateModal}
+                                    onClick={() => openCreateModal('topic')}
                                     className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-sm font-medium"
                                 >
                                     <Plus className="w-5 h-5" />
@@ -397,9 +551,8 @@ function PortfolioContent() {
                                 </button>
                             )}
 
-                            {/* Everyone: Add Project */}
                             <button
-                                onClick={openCreateModal}
+                                onClick={() => openCreateModal('project')}
                                 className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm font-medium"
                             >
                                 <Plus className="w-5 h-5" />
@@ -421,95 +574,63 @@ function PortfolioContent() {
                             : "등록된 프로젝트가 없습니다. + 프로젝트 추가를 눌러 만들어보세요!"
                         }
                     </div>
-                ) : (
+                ) : isMyView ? (
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {items.map((item) => {
-                            const firstMedia = extractFirstMedia(item.description);
+                        {items.map((item) => renderCard(item))}
+                    </div>
+                ) : (
+                    <div className="space-y-12">
+                        {topics.map(topic => {
+                            const topicItems = items.filter(item => item.topic_id === topic.id);
+
                             return (
-                                <div
-                                    key={item.id}
-                                    onClick={() => setSelectedItem(item)}
-                                    className="bg-white rounded-xl border hover:shadow-lg transition-all group flex flex-col h-full cursor-pointer overflow-hidden"
-                                >
-                                    <div className="p-6 flex-1 flex flex-col">
-                                        <div className="flex justify-between items-start mb-4">
-                                            <div className="flex items-center gap-2">
-                                                <div className="bg-blue-100 p-1.5 rounded-full">
-                                                    <User className="w-4 h-4 text-blue-600" />
-                                                </div>
-                                                <h3 className="text-lg font-bold text-gray-900">
-                                                    {item.author_name || "익명 사용자"}
-                                                </h3>
-                                            </div>
-                                            {isOwner(item) && (
-                                                <div className="flex gap-1 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <button
-                                                        onClick={(e) => openEditModal(e, item)}
-                                                        className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded"
-                                                    >
-                                                        <Pencil className="w-4 h-4" />
-                                                    </button>
-                                                    <button
-                                                        onClick={(e) => handleDelete(e, item.id)}
-                                                        className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"
-                                                    >
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </button>
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        <div className="flex-1 mb-4 h-48 bg-gray-50 rounded-lg overflow-hidden relative flex items-center justify-center">
-                                            {firstMedia ? (
-                                                firstMedia.type === 'video' ? (
-                                                    <video
-                                                        src={firstMedia.url}
-                                                        className="w-full h-full object-cover"
-                                                        muted
-                                                        onMouseOver={e => (e.target as HTMLVideoElement).play()}
-                                                        onMouseOut={e => (e.target as HTMLVideoElement).pause()}
-                                                    />
-                                                ) : (
-                                                    <img
-                                                        src={firstMedia.url}
-                                                        alt="Project Preview"
-                                                        className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-                                                    />
-                                                )
-                                            ) : (
-                                                <div className="w-full h-full p-4 overflow-hidden text-sm text-gray-500 prose-sm prose-p:my-0">
-                                                    <div className="line-clamp-[8] break-words whitespace-pre-wrap">
-                                                        {item.description}
-                                                    </div>
-                                                </div>
-                                            )}
-                                            {firstMedia?.type === 'video' && (
-                                                <div className="absolute top-2 right-2 bg-black/50 text-white p-1.5 rounded-full">
-                                                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        <div className="pt-4 border-t flex items-center justify-between">
-                                            <span className="text-xs text-gray-400">
-                                                {new Date(item.created_at).toLocaleDateString()}
-                                            </span>
+                                <section key={topic.id} className="space-y-6">
+                                    <div className="bg-gradient-to-r from-green-600 to-green-500 text-white px-6 py-4 rounded-xl shadow-md flex justify-between items-center">
+                                        <div>
+                                            <h2 className="text-xl font-bold text-white">{topic.title}</h2>
+                                            {topic.description && <p className="text-green-50 text-sm mt-1">{topic.description}</p>}
                                         </div>
                                     </div>
-                                </div>
+                                    {topicItems.length > 0 ? (
+                                        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                            {topicItems.map(item => renderCard(item))}
+                                        </div>
+                                    ) : (
+                                        <div className="py-8 text-center text-gray-400 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                                            아직 제출된 과제가 없습니다.
+                                        </div>
+                                    )}
+                                </section>
                             );
                         })}
+
+                        {(() => {
+                            const uncategorizedItems = items.filter(item => !item.topic_id && item.type === 'portfolio');
+                            if (uncategorizedItems.length === 0) return null;
+
+                            return (
+                                <section className="space-y-6">
+                                    <div className="bg-white px-6 py-4 rounded-xl border-l-4 border-gray-400 shadow-sm">
+                                        <h2 className="text-xl font-bold text-gray-700">자유 프로젝트 (미분류)</h2>
+                                    </div>
+                                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                        {uncategorizedItems.map(item => renderCard(item))}
+                                    </div>
+                                </section>
+                            );
+                        })()}
                     </div>
                 )}
             </div>
 
-            {/* Modals remain mostly unchanged */}
             {isModalOpen && (
                 <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
                     <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl animate-in fade-in zoom-in-95 duration-200">
                         <div className="flex justify-between items-center p-6 border-b">
                             <h2 className="text-xl font-bold">
-                                {editingId ? "프로젝트 수정" : "새 프로젝트 추가"}
+                                {isTopicModal
+                                    ? "새 과제(주제) 등록"
+                                    : (editingId ? "프로젝트 수정" : "새 프로젝트 추가")}
                             </h2>
                             <button onClick={closeModal} className="text-gray-400 hover:text-gray-600">
                                 <X className="w-6 h-6" />
@@ -517,69 +638,112 @@ function PortfolioContent() {
                         </div>
 
                         <form onSubmit={handleSubmit} className="p-6 space-y-4">
-                            <div className="flex items-center gap-3 bg-gray-50 p-3 rounded-lg">
-                                <div className="bg-blue-100 p-2 rounded-full">
-                                    <User className="w-5 h-5 text-blue-600" />
+                            {!isTopicModal && (
+                                <div className="flex items-center gap-3 bg-gray-50 p-3 rounded-lg">
+                                    <div className="bg-blue-100 p-2 rounded-full">
+                                        <User className="w-5 h-5 text-blue-600" />
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-gray-500">작성자</p>
+                                        <p className="font-medium text-gray-900">
+                                            {getAuthorName()}
+                                        </p>
+                                    </div>
                                 </div>
+                            )}
+
+                            {isTopicModal ? (
                                 <div>
-                                    <p className="text-xs text-gray-500">작성자</p>
-                                    <p className="font-medium text-gray-900">
-                                        {getAuthorName()}
-                                    </p>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">과제 주제</label>
+                                    <input
+                                        type="text"
+                                        value={formData.title}
+                                        onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                                        className="w-full p-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                                        placeholder="과제 주제를 입력하세요 (예: 1주차 - AI 윤리)"
+                                        required
+                                    />
+                                    <label className="block text-sm font-medium text-gray-700 mt-4 mb-1">설명 (선택)</label>
+                                    <textarea
+                                        value={formData.description}
+                                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                                        className="w-full h-24 p-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none resize-none"
+                                        placeholder="이 주제에 대한 간단한 설명을 입력하세요."
+                                    />
                                 </div>
-                            </div>
+                            ) : (
+                                <>
+                                    {!isMyView && (
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">주제 선택 (선택사항)</label>
+                                            <select
+                                                value={formData.topic_id}
+                                                onChange={(e) => setFormData({ ...formData, topic_id: e.target.value })}
+                                                className="w-full p-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+                                            >
+                                                <option value="">자유 프로젝트 (미분류)</option>
+                                                {topics.map(topic => (
+                                                    <option key={topic.id} value={topic.id}>
+                                                        {topic.title}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    )}
 
-                            <div>
-                                <textarea
-                                    value={formData.description}
-                                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                    className="w-full h-40 p-4 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none text-base"
-                                    placeholder="프로젝트에 대해 설명해주세요..."
-                                    required
-                                />
+                                    <div>
+                                        <textarea
+                                            value={formData.description}
+                                            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                                            className="w-full h-40 p-4 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none text-base"
+                                            placeholder="프로젝트에 대해 설명해주세요..."
+                                            required
+                                        />
 
-                                <div className="flex gap-2 mt-2">
-                                    <button
-                                        type="button"
-                                        onClick={() => imageInputRef.current?.click()}
-                                        className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors relative"
-                                        title="사진 추가"
-                                    >
-                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                                        {isUploading && <span className="absolute top-0 right-0 w-2 h-2 bg-blue-600 rounded-full animate-ping"></span>}
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => videoInputRef.current?.click()}
-                                        className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors relative"
-                                        title="동영상 추가"
-                                    >
-                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
-                                        {isUploading && <span className="absolute top-0 right-0 w-2 h-2 bg-blue-600 rounded-full animate-ping"></span>}
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={handleLinkInsert}
-                                        className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                        title="링크 추가"
-                                    >
-                                        <Globe className="w-5 h-5" />
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => htmlInputRef.current?.click()}
-                                        className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors relative"
-                                        title="HTML 파일 추가"
-                                    >
-                                        <FileCode className="w-5 h-5" />
-                                        {isUploading && <span className="absolute top-0 right-0 w-2 h-2 bg-blue-600 rounded-full animate-ping"></span>}
-                                    </button>
+                                        <div className="flex gap-2 mt-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => imageInputRef.current?.click()}
+                                                className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors relative"
+                                                title="사진 추가"
+                                            >
+                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                                {isUploading && <span className="absolute top-0 right-0 w-2 h-2 bg-blue-600 rounded-full animate-ping"></span>}
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => videoInputRef.current?.click()}
+                                                className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors relative"
+                                                title="동영상 추가"
+                                            >
+                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                                                {isUploading && <span className="absolute top-0 right-0 w-2 h-2 bg-blue-600 rounded-full animate-ping"></span>}
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={handleLinkInsert}
+                                                className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                title="링크 추가"
+                                            >
+                                                <Globe className="w-5 h-5" />
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => htmlInputRef.current?.click()}
+                                                className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors relative"
+                                                title="HTML 파일 추가"
+                                            >
+                                                <FileCode className="w-5 h-5" />
+                                                {isUploading && <span className="absolute top-0 right-0 w-2 h-2 bg-blue-600 rounded-full animate-ping"></span>}
+                                            </button>
 
-                                    <input type="file" ref={imageInputRef} className="hidden" accept="image/*" onChange={(e) => handleFileUpload(e, 'image')} />
-                                    <input type="file" ref={videoInputRef} className="hidden" accept="video/*" onChange={(e) => handleFileUpload(e, 'video')} />
-                                    <input type="file" ref={htmlInputRef} className="hidden" accept=".html,text/html" onChange={(e) => handleFileUpload(e, 'html')} />
-                                </div>
-                            </div>
+                                            <input type="file" ref={imageInputRef} className="hidden" accept="image/*" onChange={(e) => handleFileUpload(e, 'image')} />
+                                            <input type="file" ref={videoInputRef} className="hidden" accept="video/*" onChange={(e) => handleFileUpload(e, 'video')} />
+                                            <input type="file" ref={htmlInputRef} className="hidden" accept=".html,text/html" onChange={(e) => handleFileUpload(e, 'html')} />
+                                        </div>
+                                    </div>
+                                </>
+                            )}
 
                             <div className="flex justify-end gap-3 pt-2">
                                 <button type="button" onClick={closeModal} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg font-medium" disabled={isUploading}>취소</button>
@@ -592,14 +756,17 @@ function PortfolioContent() {
                 </div>
             )}
 
-            {/* Detail Modal */}
             {selectedItem && (
                 <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setSelectedItem(null)}>
                     <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
                         <div className="flex justify-between items-center p-6 border-b">
                             <div className="flex items-center gap-3">
-                                <div className="bg-blue-100 p-2 rounded-full">
-                                    <User className="w-6 h-6 text-blue-600" />
+                                <div className={`${selectedItem.type === 'discussion' ? 'bg-green-100' : 'bg-blue-100'} p-2 rounded-full`}>
+                                    {selectedItem.type === 'discussion' ? (
+                                        <Users className={`w-6 h-6 ${selectedItem.type === 'discussion' ? 'text-green-600' : 'text-blue-600'}`} />
+                                    ) : (
+                                        <User className="w-6 h-6 text-blue-600" />
+                                    )}
                                 </div>
                                 <div>
                                     <h2 className="text-xl font-bold text-gray-900">{selectedItem.author_name || "익명 사용자"}</h2>
@@ -623,10 +790,12 @@ function PortfolioContent() {
                         </div>
                         {isOwner(selectedItem) && (
                             <div className="p-4 border-t bg-gray-50 rounded-b-2xl flex justify-end gap-2">
-                                <button onClick={(e) => { setSelectedItem(null); openEditModal(e, selectedItem); }} className="px-4 py-2 text-gray-700 hover:bg-gray-200 rounded-lg font-medium flex items-center gap-2">
-                                    <Pencil className="w-4 h-4" /> 수정
-                                </button>
-                                <button onClick={(e) => { setSelectedItem(null); handleDelete(e, selectedItem.id); }} className="px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg font-medium flex items-center gap-2">
+                                {selectedItem.type === 'portfolio' && (
+                                    <button onClick={(e) => { setSelectedItem(null); openEditModal(e, selectedItem); }} className="px-4 py-2 text-gray-700 hover:bg-gray-200 rounded-lg font-medium flex items-center gap-2">
+                                        <Pencil className="w-4 h-4" /> 수정
+                                    </button>
+                                )}
+                                <button onClick={(e) => { setSelectedItem(null); handleDelete(e, selectedItem); }} className="px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg font-medium flex items-center gap-2">
                                     <Trash2 className="w-4 h-4" /> 삭제
                                 </button>
                             </div>

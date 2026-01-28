@@ -150,7 +150,7 @@ export default function DiscussionsPage() {
             <div className="flex items-center justify-between mb-8">
                 <div>
                     <h1 className="text-3xl font-bold text-gray-900">질문 · 토론</h1>
-                    <p className="text-gray-500 mt-2">자유롭게 질문하고 지식을 공유해보세요.</p>
+                    <p className="text-gray-500 mt-2">(질문·토론) 자유롭게 질문하고 지식을 공유해보세요.</p>
                 </div>
                 <button
                     onClick={openCreateModal}
