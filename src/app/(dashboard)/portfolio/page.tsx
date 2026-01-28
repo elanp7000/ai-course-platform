@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, Suspense } from "react";
 import ReactMarkdown from "react-markdown";
 import { supabase } from "@/utils/supabase/client";
-import { Plus, Pencil, Trash2, X, Globe, User, FileCode, Users, FolderInput, ArrowUp, ArrowDown } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Globe, User, FileCode, Users, FolderInput, ArrowUp, ArrowDown, ExternalLink } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 
 interface UnifiedItem {
@@ -24,6 +24,7 @@ interface Topic {
     description: string;
     created_at: string;
     sort_order?: number;
+    link_url?: string;
 }
 
 interface StudentProfile {
@@ -52,7 +53,7 @@ function PortfolioContent() {
     const [isTopicModal, setIsTopicModal] = useState(false);
     const [isMoveOnly, setIsMoveOnly] = useState(false); // NEW: Instructor Move Mode
     const [editingId, setEditingId] = useState<string | null>(null);
-    const [formData, setFormData] = useState({ title: "", description: "", project_url: "", topic_id: "" });
+    const [formData, setFormData] = useState({ title: "", description: "", project_url: "", topic_id: "", link_url: "" });
 
     // Detail Modal State
     const [selectedItem, setSelectedItem] = useState<UnifiedItem | null>(null);
@@ -301,7 +302,8 @@ function PortfolioContent() {
             title: item.title,
             description: item.description,
             project_url: item.project_url || "",
-            topic_id: item.topic_id || ""
+            topic_id: item.topic_id || "",
+            link_url: ""
         });
         setIsModalOpen(true);
     };
@@ -313,7 +315,8 @@ function PortfolioContent() {
             title: item.title,
             description: item.description, // Keep description to satisfy requirement
             project_url: item.project_url || "",
-            topic_id: item.topic_id || ""
+            topic_id: item.topic_id || "",
+            link_url: ""
         });
         setIsMoveOnly(true);
         setIsModalOpen(true);
@@ -379,7 +382,8 @@ function PortfolioContent() {
             title: topic.title,
             description: topic.description || "",
             project_url: "",
-            topic_id: ""
+            topic_id: "",
+            link_url: topic.link_url || ""
         });
         setIsTopicModal(true);
         setIsMoveOnly(false);
@@ -389,7 +393,7 @@ function PortfolioContent() {
     const openCreateModal = (type: 'topic' | 'project') => {
         if (!currentUser) return alert("로그인이 필요합니다.");
         setEditingId(null);
-        setFormData({ title: "", description: "", project_url: "", topic_id: "" });
+        setFormData({ title: "", description: "", project_url: "", topic_id: "", link_url: "" });
         setIsTopicModal(type === 'topic');
         setIsMoveOnly(false);
         setIsModalOpen(true);
@@ -400,7 +404,7 @@ function PortfolioContent() {
         setIsTopicModal(false);
         setIsMoveOnly(false); // Reset
         setEditingId(null);
-        setFormData({ title: "", description: "", project_url: "", topic_id: "" });
+        setFormData({ title: "", description: "", project_url: "", topic_id: "", link_url: "" });
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -417,7 +421,8 @@ function PortfolioContent() {
                         .from('portfolio_topics')
                         .update({
                             title: formData.title,
-                            description: formData.description
+                            description: formData.description,
+                            link_url: formData.link_url
                         })
                         .eq('id', editingId);
 
@@ -428,7 +433,8 @@ function PortfolioContent() {
                         .from('portfolio_topics')
                         .insert([{
                             title: formData.title,
-                            description: formData.description
+                            description: formData.description,
+                            link_url: formData.link_url
                         }]);
 
                     if (error) throw error;
@@ -702,7 +708,19 @@ function PortfolioContent() {
                                 <section key={topic.id} className="space-y-6">
                                     <div className="bg-gradient-to-r from-green-600 to-green-500 text-white px-6 py-4 rounded-xl shadow-md flex justify-between items-center group/topic">
                                         <div>
-                                            <h2 className="text-xl font-bold text-white">{topic.title}</h2>
+                                            {topic.link_url ? (
+                                                <a
+                                                    href={topic.link_url}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="text-xl font-bold text-white hover:underline flex items-center gap-2"
+                                                >
+                                                    {topic.title}
+                                                    <ExternalLink className="w-5 h-5 text-green-100" />
+                                                </a>
+                                            ) : (
+                                                <h2 className="text-xl font-bold text-white">{topic.title}</h2>
+                                            )}
                                             {topic.description && <p className="text-green-50 text-sm mt-1">{topic.description}</p>}
                                         </div>
                                         {userRole === 'instructor' && (
@@ -830,6 +848,14 @@ function PortfolioContent() {
                                         onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                                         className="w-full h-24 p-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none resize-none"
                                         placeholder="이 주제에 대한 간단한 설명을 입력하세요."
+                                    />
+                                    <label className="block text-sm font-medium text-gray-700 mt-4 mb-1">링크 주소 (선택)</label>
+                                    <input
+                                        type="url"
+                                        value={formData.link_url}
+                                        onChange={(e) => setFormData({ ...formData, link_url: e.target.value })}
+                                        className="w-full p-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                                        placeholder="https://example.com"
                                     />
                                 </div>
                             ) : (
