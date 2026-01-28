@@ -1,14 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Folder, FileText, Download, Search, Plus, X, PlayCircle, Image as ImageIcon, FileCode, BookOpen, Link as LinkIcon, Trash2, Edit2, CheckCircle } from "lucide-react";
+import { useEffect, useState, useRef } from "react";
+import { Folder, FileText, Download, Search, Plus, X, PlayCircle, Image as ImageIcon, FileCode, BookOpen, Link as LinkIcon, Trash2, Edit2, CheckCircle, Bot, Globe } from "lucide-react";
 import { supabase } from "@/utils/supabase/client";
+import ReactMarkdown from "react-markdown";
 
 type Material = {
     id: string;
     week_id: string;
     title: string;
-    type: 'video' | 'text' | 'pdf' | 'link' | 'image' | 'html';
+    type: 'video' | 'text' | 'pdf' | 'link' | 'image' | 'html' | 'ai_tool';
     content_url?: string;
     description?: string;
     created_at: string;
@@ -35,7 +36,14 @@ export default function MaterialsPage() {
     // UI State
     const [isAdding, setIsAdding] = useState(false);
     const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
+    const [viewingMaterial, setViewingMaterial] = useState<Material | null>(null);
     const [isUploading, setIsUploading] = useState(false);
+
+    // References for file inputs
+    const imageInputRef = useRef<HTMLInputElement>(null);
+    const videoInputRef = useRef<HTMLInputElement>(null);
+    const htmlInputRef = useRef<HTMLInputElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null); // For main content file
 
     // Form State
     const [formData, setFormData] = useState({
@@ -43,7 +51,7 @@ export default function MaterialsPage() {
         title: "",
         type: "link" as Material['type'],
         content_url: "",
-        description: ""
+        description: "" // Now supports Markdown
     });
     const [file, setFile] = useState<File | null>(null);
 
@@ -108,6 +116,45 @@ export default function MaterialsPage() {
         return publicUrl;
     };
 
+    // New: Handle Description Uploads (Images/Videos/HTML within description)
+    const handleDescriptionUpload = async (event: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'video' | 'html') => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        setIsUploading(true);
+        try {
+            const url = await uploadFile(file);
+
+            const markdown = type === 'image'
+                ? `\n![${file.name}](${url})\n`
+                : type === 'video'
+                    ? `\n[동영상 보기](${url})\n`
+                    : `\n[HTML 파일 보기](${url})\n`;
+
+            setFormData(prev => ({
+                ...prev,
+                description: prev.description + markdown
+            }));
+        } catch (error: any) {
+            console.error('Upload failed:', error);
+            alert('업로드 실패: ' + error.message);
+        } finally {
+            setIsUploading(false);
+            if (event.target) event.target.value = '';
+        }
+    };
+
+    const handleLinkInsert = () => {
+        const url = prompt("링크 주소(URL)를 입력해주세요:");
+        if (!url) return;
+        const text = prompt("링크 텍스트를 입력해주세요 (선택사항):") || "링크";
+        const markdown = `\n[${text}](${url})\n`;
+        setFormData(prev => ({
+            ...prev,
+            description: prev.description + markdown
+        }));
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsUploading(true);
@@ -153,7 +200,8 @@ export default function MaterialsPage() {
         }
     };
 
-    const handleEditClick = (item: Material) => {
+    const handleEditClick = (item: Material, e: React.MouseEvent) => {
+        e.stopPropagation();
         setEditingMaterial(item);
         setFormData({
             week_id: item.week_id,
@@ -166,7 +214,8 @@ export default function MaterialsPage() {
         setIsAdding(true);
     };
 
-    const handleDeleteClick = async (id: string) => {
+    const handleDeleteClick = async (id: string, e: React.MouseEvent) => {
+        e.stopPropagation();
         if (!confirm("정말 이 자료를 삭제하시겠습니까?")) return;
         const { error } = await supabase.from('materials').delete().eq('id', id);
         if (error) alert("삭제 실패: " + error.message);
@@ -189,6 +238,38 @@ export default function MaterialsPage() {
     });
 
     const isInstructor = userRole === 'instructor';
+
+    const MarkdownComponents = {
+        a: ({ node, ...props }: any) => {
+            const { href, children } = props;
+            if (href?.match(/\.(mp4|webm|ogg|mov)$/i)) {
+                return (
+                    <video controls className="w-full rounded-xl my-4 max-h-[500px] bg-black" preload="metadata">
+                        <source src={href} />
+                        동영상을 재생할 수 없습니다.
+                    </video>
+                );
+            }
+            return (
+                <a
+                    {...props}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline inline-flex items-center gap-1"
+                >
+                    <LinkIcon className="w-4 h-4 inline" />
+                    {children}
+                </a>
+            );
+        },
+        img: ({ node, ...props }: any) => (
+            <img
+                {...props}
+                className="rounded-xl w-full h-auto my-4 shadow-sm"
+                loading="lazy"
+            />
+        )
+    };
 
     return (
         <div className="h-full flex flex-col max-w-7xl mx-auto w-full">
@@ -224,15 +305,35 @@ export default function MaterialsPage() {
                                 className="w-full pl-9 pr-4 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                             />
                         </div>
-                        <div className="flex gap-2 overflow-x-auto pb-2 md:pb-0 w-full md:w-auto">
-                            {['all', 'video', 'pdf', 'link', 'image', 'html'].map(type => (
+                        <div className="flex gap-2 overflow-x-auto pb-2 md:pb-0 w-full md:w-auto custom-scrollbar">
+                            <style jsx>{`
+                                .custom-scrollbar::-webkit-scrollbar {
+                                    height: 4px;
+                                }
+                                .custom-scrollbar::-webkit-scrollbar-track {
+                                    background: transparent;
+                                }
+                                .custom-scrollbar::-webkit-scrollbar-thumb {
+                                    background-color: #e5e7eb;
+                                    border-radius: 20px;
+                                }
+                            `}</style>
+                            {[
+                                { id: 'all', label: '전체' },
+                                { id: 'video', label: 'Video' },
+                                { id: 'pdf', label: 'PDF' },
+                                { id: 'link', label: 'Link' },
+                                { id: 'image', label: 'Image' },
+                                { id: 'html', label: 'Html' },
+                                { id: 'ai_tool', label: 'AI 도구' }
+                            ].map(type => (
                                 <button
-                                    key={type}
-                                    onClick={() => setSelectedType(type)}
-                                    className={`px-3 py-1.5 rounded-lg text-sm font-medium capitalize whitespace-nowrap transition-colors ${selectedType === type ? 'bg-blue-100 text-blue-700' : 'bg-white border text-gray-600 hover:bg-gray-50'
+                                    key={type.id}
+                                    onClick={() => setSelectedType(type.id)}
+                                    className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${selectedType === type.id ? 'bg-blue-100 text-blue-700' : 'bg-white border text-gray-600 hover:bg-gray-50'
                                         }`}
                                 >
-                                    {type === 'all' ? '전체' : type}
+                                    {type.label}
                                 </button>
                             ))}
                         </div>
@@ -241,7 +342,19 @@ export default function MaterialsPage() {
             </div>
 
             {/* List - Scrollable */}
-            <div className="flex-1 overflow-y-auto px-4 md:px-8 pb-8">
+            <div className="flex-1 overflow-y-auto px-4 md:px-8 pb-8 custom-scrollbar">
+                <style jsx>{`
+                    .custom-scrollbar::-webkit-scrollbar {
+                        width: 6px;
+                    }
+                    .custom-scrollbar::-webkit-scrollbar-track {
+                        background: transparent;
+                    }
+                    .custom-scrollbar::-webkit-scrollbar-thumb {
+                        background-color: #e5e7eb;
+                        border-radius: 20px;
+                    }
+                `}</style>
                 <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden divide-y divide-gray-100">
                     {loading ? (
                         <div className="p-12 text-center text-gray-400">로딩 중...</div>
@@ -256,14 +369,20 @@ export default function MaterialsPage() {
                             if (material.type === 'image') Icon = ImageIcon;
                             if (material.type === 'html') Icon = FileCode;
                             if (material.type === 'link') Icon = LinkIcon;
+                            if (material.type === 'ai_tool') Icon = Bot;
 
                             return (
-                                <div key={material.id} className="p-4 hover:bg-gray-50 transition-colors flex items-center justify-between group">
+                                <div
+                                    key={material.id}
+                                    className="p-4 hover:bg-gray-50 transition-colors flex items-center justify-between group cursor-pointer"
+                                    onClick={() => setViewingMaterial(material)}
+                                >
                                     <div className="flex items-center gap-4 flex-1 min-w-0">
                                         <div className={`p-3 rounded-lg shrink-0 ${material.type === 'pdf' ? 'bg-red-50 text-red-600' :
                                             material.type === 'video' ? 'bg-purple-50 text-purple-600' :
                                                 material.type === 'image' ? 'bg-green-50 text-green-600' :
-                                                    'bg-blue-50 text-blue-600'
+                                                    material.type === 'ai_tool' ? 'bg-indigo-50 text-indigo-600' :
+                                                        'bg-blue-50 text-blue-600'
                                             }`}>
                                             <Icon className="w-6 h-6" />
                                         </div>
@@ -280,29 +399,30 @@ export default function MaterialsPage() {
                                                 {material.title}
                                             </h3>
                                             <p className="text-sm text-gray-500 truncate max-w-xl">
-                                                {material.description || material.content_url}
+                                                {material.description?.replace(/!\[.*?\]\(.*?\)/g, '[이미지]').replace(/\[.*?\]\(.*?\)/g, '[링크]') || material.content_url}
                                             </p>
                                         </div>
                                     </div>
 
                                     <div className="flex items-center gap-2">
                                         {material.content_url && (
-                                            <a
-                                                href={material.content_url}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    window.open(material.content_url, '_blank');
+                                                }}
                                                 className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
                                                 title="보기/다운로드"
                                             >
                                                 <Download className="w-5 h-5" />
-                                            </a>
+                                            </button>
                                         )}
                                         {isInstructor && (
                                             <>
-                                                <button onClick={() => handleEditClick(material)} className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-full transition-colors">
+                                                <button onClick={(e) => handleEditClick(material, e)} className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-full transition-colors">
                                                     <Edit2 className="w-5 h-5" />
                                                 </button>
-                                                <button onClick={() => handleDeleteClick(material.id)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors">
+                                                <button onClick={(e) => handleDeleteClick(material.id, e)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors">
                                                     <Trash2 className="w-5 h-5" />
                                                 </button>
                                             </>
@@ -315,52 +435,52 @@ export default function MaterialsPage() {
                 </div>
             </div>
 
-            {/* Modal */}
-            {
-                isAdding && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-                        <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-                            <div className="p-6 border-b flex justify-between items-center sticky top-0 bg-white z-10">
-                                <h2 className="text-xl font-bold">{editingMaterial ? "자료 수정" : "새 자료 등록"}</h2>
-                                <button onClick={handleCloseModal} className="text-gray-400 hover:text-gray-600">
-                                    <X className="w-6 h-6" />
-                                </button>
-                            </div>
+            {/* Creation/Edit Modal */}
+            {isAdding && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200">
+                        <div className="p-6 border-b flex justify-between items-center bg-white z-10">
+                            <h2 className="text-xl font-bold">{editingMaterial ? "자료 수정" : "새 자료 등록"}</h2>
+                            <button onClick={handleCloseModal} className="text-gray-400 hover:text-gray-600">
+                                <X className="w-6 h-6" />
+                            </button>
+                        </div>
 
-                            <form onSubmit={handleSubmit} className="p-6 space-y-6">
-                                {/* Week Selection */}
-                                <div>
-                                    <label className="block text-sm font-bold text-gray-700 mb-2">주차 선택 <span className="text-red-500">*</span></label>
-                                    <select
-                                        required
-                                        value={formData.week_id}
-                                        onChange={(e) => setFormData({ ...formData, week_id: e.target.value })}
-                                        className="w-full p-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-                                    >
-                                        <option value="">주차를 선택하세요</option>
-                                        {weeks.map(week => (
-                                            <option key={week.id} value={week.id}>{week.week_number}주차 - {week.title}</option>
-                                        ))}
-                                    </select>
+                        <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
+                            <form id="materialForm" onSubmit={handleSubmit} className="space-y-6">
+                                {/* Flex Container for Week & Title */}
+                                <div className="grid md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-bold text-gray-700 mb-2">주차 선택 <span className="text-red-500">*</span></label>
+                                        <select
+                                            required
+                                            value={formData.week_id}
+                                            onChange={(e) => setFormData({ ...formData, week_id: e.target.value })}
+                                            className="w-full p-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                                        >
+                                            <option value="">주차를 선택하세요</option>
+                                            {weeks.map(week => (
+                                                <option key={week.id} value={week.id}>{week.week_number}주차 - {week.title}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-bold text-gray-700 mb-2">제목 <span className="text-red-500">*</span></label>
+                                        <input
+                                            type="text"
+                                            required
+                                            value={formData.title}
+                                            onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                                            className="w-full p-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                                            placeholder="자료 제목을 입력하세요"
+                                        />
+                                    </div>
                                 </div>
 
-                                {/* Title */}
-                                <div>
-                                    <label className="block text-sm font-bold text-gray-700 mb-2">제목 <span className="text-red-500">*</span></label>
-                                    <input
-                                        type="text"
-                                        required
-                                        value={formData.title}
-                                        onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                                        className="w-full p-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-                                        placeholder="자료 제목을 입력하세요"
-                                    />
-                                </div>
-
-                                {/* Type Selector (Icons) */}
+                                {/* Type Selector */}
                                 <div>
                                     <label className="block text-sm font-bold text-gray-700 mb-2">유형 선택 <span className="text-red-500">*</span></label>
-                                    <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
+                                    <div className="grid grid-cols-3 md:grid-cols-7 gap-2">
                                         {[
                                             { id: 'link', label: '링크', icon: LinkIcon },
                                             { id: 'video', label: '동영상', icon: PlayCircle },
@@ -368,6 +488,7 @@ export default function MaterialsPage() {
                                             { id: 'image', label: '이미지', icon: ImageIcon },
                                             { id: 'html', label: 'HTML', icon: FileCode },
                                             { id: 'text', label: '텍스트', icon: BookOpen },
+                                            { id: 'ai_tool', label: 'AI 도구', icon: Bot },
                                         ].map((type) => (
                                             <button
                                                 key={type.id}
@@ -378,22 +499,23 @@ export default function MaterialsPage() {
                                                     : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50 hover:border-gray-300'
                                                     }`}
                                             >
-                                                <type.icon className="w-6 h-6 mb-1" />
-                                                <span className="text-xs font-medium">{type.label}</span>
+                                                <type.icon className="w-5 h-5 mb-1" />
+                                                <span className="text-[10px] sm:text-xs font-medium whitespace-nowrap">{type.label}</span>
                                             </button>
                                         ))}
                                     </div>
                                 </div>
 
-                                {/* Content Input */}
+                                {/* Main Content Input */}
                                 <div>
                                     <label className="block text-sm font-bold text-gray-700 mb-2">
-                                        {['pdf', 'image', 'video', 'html'].includes(formData.type) ? '파일 업로드' : '링크 주소 (URL)'}
+                                        {['pdf', 'image', 'video', 'html'].includes(formData.type) ? '대표 파일 업로드' : '대표 링크 주소 (URL)'}
                                     </label>
                                     {['pdf', 'image', 'video', 'html'].includes(formData.type) ? (
                                         <div className="border border-gray-200 rounded-xl p-2 bg-gray-50">
                                             <input
                                                 type="file"
+                                                ref={fileInputRef}
                                                 onChange={(e) => setFile(e.target.files?.[0] || null)}
                                                 accept={
                                                     formData.type === 'pdf' ? '.pdf' :
@@ -418,42 +540,151 @@ export default function MaterialsPage() {
                                             placeholder="https://example.com"
                                         />
                                     )}
+                                    <p className="text-xs text-gray-400 mt-1">※ 목록에서 바로 접근할 수 있는 대표 콘텐츠입니다.</p>
                                 </div>
 
-                                {/* Description */}
+                                {/* Rich Description */}
                                 <div>
-                                    <label className="block text-sm font-bold text-gray-700 mb-2">설명 (선택)</label>
-                                    <textarea
-                                        value={formData.description}
-                                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                        className="w-full p-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none h-24 resize-none"
-                                        placeholder="자료에 대한 간단한 설명을 입력하세요."
-                                    />
-                                </div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-2">상세 설명</label>
+                                    <div className="border rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-blue-500">
+                                        <textarea
+                                            value={formData.description}
+                                            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                                            className="w-full p-4 border-none outline-none h-48 resize-none text-base"
+                                            placeholder="자료에 대한 상세 설명을 입력하세요. 아래 버튼을 사용하여 이미지, 동영상, 링크를 추가할 수 있습니다."
+                                        />
+                                        <div className="bg-gray-50 p-2 flex gap-2 border-t">
+                                            <button
+                                                type="button"
+                                                onClick={() => imageInputRef.current?.click()}
+                                                className="p-2 text-gray-500 hover:text-blue-600 hover:bg-white rounded-lg transition-colors"
+                                                title="이미지 추가"
+                                            >
+                                                <ImageIcon className="w-5 h-5" />
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => videoInputRef.current?.click()}
+                                                className="p-2 text-gray-500 hover:text-purple-600 hover:bg-white rounded-lg transition-colors"
+                                                title="동영상 추가"
+                                            >
+                                                <PlayCircle className="w-5 h-5" />
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={handleLinkInsert}
+                                                className="p-2 text-gray-500 hover:text-green-600 hover:bg-white rounded-lg transition-colors"
+                                                title="링크 추가"
+                                            >
+                                                <LinkIcon className="w-5 h-5" />
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => htmlInputRef.current?.click()}
+                                                className="p-2 text-gray-500 hover:text-orange-600 hover:bg-white rounded-lg transition-colors"
+                                                title="HTML 파일 추가"
+                                            >
+                                                <FileCode className="w-5 h-5" />
+                                            </button>
 
-                                {/* Actions */}
-                                <div className="flex justify-end gap-3 pt-4 border-t">
-                                    <button
-                                        type="button"
-                                        onClick={handleCloseModal}
-                                        className="px-5 py-2.5 text-gray-600 hover:bg-gray-100 rounded-xl font-medium"
-                                    >
-                                        취소
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        disabled={isUploading}
-                                        className="px-5 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-bold disabled:opacity-50 flex items-center gap-2"
-                                    >
-                                        {isUploading && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
-                                        {editingMaterial ? "수정완료" : "자료등록"}
-                                    </button>
+                                            {/* Hidden Inputs */}
+                                            <input type="file" ref={imageInputRef} className="hidden" accept="image/*" onChange={(e) => handleDescriptionUpload(e, 'image')} />
+                                            <input type="file" ref={videoInputRef} className="hidden" accept="video/*" onChange={(e) => handleDescriptionUpload(e, 'video')} />
+                                            <input type="file" ref={htmlInputRef} className="hidden" accept=".html,text/html" onChange={(e) => handleDescriptionUpload(e, 'html')} />
+                                        </div>
+                                    </div>
                                 </div>
                             </form>
                         </div>
+
+                        <div className="p-4 border-t bg-gray-50 flex justify-end gap-3 z-10">
+                            <button
+                                type="button"
+                                onClick={handleCloseModal}
+                                className="px-5 py-2.5 text-gray-600 hover:bg-gray-200 rounded-xl font-medium"
+                            >
+                                취소
+                            </button>
+                            <button
+                                type="submit"
+                                form="materialForm"
+                                disabled={isUploading}
+                                className="px-5 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-bold disabled:opacity-50 flex items-center gap-2"
+                            >
+                                {isUploading && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+                                {editingMaterial ? "수정완료" : "자료등록"}
+                            </button>
+                        </div>
                     </div>
-                )
-            }
-        </div >
+                </div>
+            )}
+
+            {/* Detail View Modal */}
+            {viewingMaterial && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setViewingMaterial(null)}>
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+                        {/* Header */}
+                        <div className="p-6 border-b flex justify-between items-start bg-white shrink-0">
+                            <div>
+                                <div className="flex items-center gap-2 mb-2">
+                                    <span className="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
+                                        Week {viewingMaterial.weeks?.week_number || "?"}
+                                    </span>
+                                    {viewingMaterial.type === 'ai_tool' && (
+                                        <span className="text-xs font-bold text-indigo-600 bg-indigo-100 px-2 py-0.5 rounded">AI 도구</span>
+                                    )}
+                                </div>
+                                <h2 className="text-2xl font-bold text-gray-900">{viewingMaterial.title}</h2>
+                                <p className="text-gray-400 text-sm mt-1">{new Date(viewingMaterial.created_at).toLocaleString()}</p>
+                            </div>
+                            <button onClick={() => setViewingMaterial(null)} className="text-gray-400 hover:text-gray-600">
+                                <X className="w-6 h-6" />
+                            </button>
+                        </div>
+
+                        {/* Content */}
+                        <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                            {/* Main Content Info */}
+                            {viewingMaterial.content_url && (
+                                <div className="mb-8 p-4 bg-gray-50 rounded-xl border border-gray-100 flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="bg-white p-2 rounded-lg border">
+                                            {viewingMaterial.type === 'link' ? <LinkIcon className="w-5 h-5 text-blue-600" /> :
+                                                viewingMaterial.type === 'pdf' ? <FileText className="w-5 h-5 text-red-600" /> :
+                                                    viewingMaterial.type === 'video' ? <PlayCircle className="w-5 h-5 text-purple-600" /> :
+                                                        viewingMaterial.type === 'ai_tool' ? <Bot className="w-5 h-5 text-indigo-600" /> :
+                                                            <Download className="w-5 h-5 text-gray-600" />}
+                                        </div>
+                                        <div>
+                                            <p className="font-bold text-sm text-gray-900">대표 콘텐츠</p>
+                                            <a href={viewingMaterial.content_url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline truncate max-w-md block">
+                                                {viewingMaterial.content_url}
+                                            </a>
+                                        </div>
+                                    </div>
+                                    <a
+                                        href={viewingMaterial.content_url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition"
+                                    >
+                                        바로가기
+                                    </a>
+                                </div>
+                            )}
+
+                            {/* Markdown Description */}
+                            <div className="prose prose-blue max-w-none">
+                                <ReactMarkdown components={MarkdownComponents}>
+                                    {viewingMaterial.description || "상세 설명이 없습니다."}
+                                </ReactMarkdown>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
     );
 }
+
+
