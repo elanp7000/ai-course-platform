@@ -146,8 +146,9 @@ export default function DiscussionsPage() {
     };
 
     return (
-        <div className="max-w-4xl mx-auto pb-20">
-            <div className="sticky top-0 z-10 bg-gray-50 pt-2 pb-6">
+        <div className="h-full flex flex-col max-w-4xl mx-auto w-full">
+            {/* Header */}
+            <div className="flex-none pt-8 px-4 md:px-8 pb-6">
                 <div className="flex items-center justify-between">
                     <div>
                         <h1 className="text-3xl font-bold text-gray-900">자유 게시판</h1>
@@ -163,59 +164,62 @@ export default function DiscussionsPage() {
                 </div>
             </div>
 
-            {isLoading ? (
-                <div className="flex justify-center py-20">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                </div>
-            ) : discussions.length === 0 ? (
-                <div className="bg-white rounded-xl border border-dashed p-12 text-center text-gray-500">
-                    <MessageCircle className="w-10 h-10 mx-auto mb-4 text-gray-300" />
-                    등록된 글이 없습니다. 첫 번째 질문을 남겨보세요!
-                </div>
-            ) : (
-                <div className="space-y-4">
-                    {discussions.map((item) => (
-                        <div key={item.id} className="bg-white rounded-xl border p-6 hover:shadow-md transition-shadow">
-                            <div className="flex justify-between items-start mb-4">
-                                <div className="flex items-start gap-4">
-                                    <span className="text-xs px-2 py-1 rounded font-bold shrink-0 bg-green-100 text-green-700 mt-0.5">
-                                        질문/토론
-                                    </span>
-                                    <div>
-                                        <h3 className="text-lg font-bold text-gray-900 mb-1">{item.title}</h3>
-                                        <div className="flex items-center gap-2 text-sm text-gray-500">
-                                            <span className="font-semibold text-gray-800">
-                                                {item.author_name || item.author_email?.split('@')[0] || '익명'}
-                                            </span>
-                                            <span>•</span>
-                                            <span>{new Date(item.created_at).toLocaleDateString()}</span>
+            {/* List */}
+            <div className="flex-1 overflow-y-auto px-4 md:px-8 pb-8">
+                {isLoading ? (
+                    <div className="flex justify-center py-20">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                    </div>
+                ) : discussions.length === 0 ? (
+                    <div className="bg-white rounded-xl border border-dashed p-12 text-center text-gray-500">
+                        <MessageCircle className="w-10 h-10 mx-auto mb-4 text-gray-300" />
+                        등록된 글이 없습니다. 첫 번째 질문을 남겨보세요!
+                    </div>
+                ) : (
+                    <div className="space-y-4">
+                        {discussions.map((item) => (
+                            <div key={item.id} className="bg-white rounded-xl border p-6 hover:shadow-md transition-shadow">
+                                <div className="flex justify-between items-start mb-4">
+                                    <div className="flex items-start gap-4">
+                                        <span className="text-xs px-2 py-1 rounded font-bold shrink-0 bg-green-100 text-green-700 mt-0.5">
+                                            질문/토론
+                                        </span>
+                                        <div>
+                                            <h3 className="text-lg font-bold text-gray-900 mb-1">{item.title}</h3>
+                                            <div className="flex items-center gap-2 text-sm text-gray-500">
+                                                <span className="font-semibold text-gray-800">
+                                                    {item.author_name || item.author_email?.split('@')[0] || '익명'}
+                                                </span>
+                                                <span>•</span>
+                                                <span>{new Date(item.created_at).toLocaleDateString()}</span>
+                                            </div>
                                         </div>
                                     </div>
+                                    {canManage(item) && (
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={() => openEditModal(item)}
+                                                className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                            >
+                                                <Pencil className="w-4 h-4" />
+                                            </button>
+                                            <button
+                                                onClick={() => handleDelete(item.id)}
+                                                className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
-                                {canManage(item) && (
-                                    <div className="flex gap-2">
-                                        <button
-                                            onClick={() => openEditModal(item)}
-                                            className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                        >
-                                            <Pencil className="w-4 h-4" />
-                                        </button>
-                                        <button
-                                            onClick={() => handleDelete(item.id)}
-                                            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                        </button>
-                                    </div>
-                                )}
+                                <div className="prose prose-sm max-w-none text-gray-600 whitespace-pre-wrap">
+                                    {item.content}
+                                </div>
                             </div>
-                            <div className="prose prose-sm max-w-none text-gray-600 whitespace-pre-wrap">
-                                {item.content}
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            )}
+                        ))}
+                    </div>
+                )}
+            </div>
 
             {/* Modal */}
             {isModalOpen && (

@@ -191,8 +191,9 @@ export default function MaterialsPage() {
     const isInstructor = userRole === 'instructor';
 
     return (
-        <div className="max-w-7xl mx-auto space-y-6 pb-20">
-            <div className="sticky top-0 z-20 bg-gray-50 pt-2 pb-2 space-y-4">
+        <div className="h-full flex flex-col max-w-7xl mx-auto w-full">
+            {/* Header & Filters - Fixed */}
+            <div className="flex-none pt-8 px-4 md:px-8 pb-6 space-y-4">
                 {/* Header */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
@@ -239,77 +240,79 @@ export default function MaterialsPage() {
                 </div>
             </div>
 
-            {/* List */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden divide-y divide-gray-100">
-                {loading ? (
-                    <div className="p-12 text-center text-gray-400">로딩 중...</div>
-                ) : filteredMaterials.length === 0 ? (
-                    <div className="p-12 text-center text-gray-500">
-                        등록된 자료가 없습니다.
-                    </div>
-                ) : (
-                    filteredMaterials.map((material) => {
-                        let Icon = FileText;
-                        if (material.type === 'video') Icon = PlayCircle;
-                        if (material.type === 'image') Icon = ImageIcon;
-                        if (material.type === 'html') Icon = FileCode;
-                        if (material.type === 'link') Icon = LinkIcon;
+            {/* List - Scrollable */}
+            <div className="flex-1 overflow-y-auto px-4 md:px-8 pb-8">
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden divide-y divide-gray-100">
+                    {loading ? (
+                        <div className="p-12 text-center text-gray-400">로딩 중...</div>
+                    ) : filteredMaterials.length === 0 ? (
+                        <div className="p-12 text-center text-gray-500">
+                            등록된 자료가 없습니다.
+                        </div>
+                    ) : (
+                        filteredMaterials.map((material) => {
+                            let Icon = FileText;
+                            if (material.type === 'video') Icon = PlayCircle;
+                            if (material.type === 'image') Icon = ImageIcon;
+                            if (material.type === 'html') Icon = FileCode;
+                            if (material.type === 'link') Icon = LinkIcon;
 
-                        return (
-                            <div key={material.id} className="p-4 hover:bg-gray-50 transition-colors flex items-center justify-between group">
-                                <div className="flex items-center gap-4 flex-1 min-w-0">
-                                    <div className={`p-3 rounded-lg shrink-0 ${material.type === 'pdf' ? 'bg-red-50 text-red-600' :
-                                        material.type === 'video' ? 'bg-purple-50 text-purple-600' :
-                                            material.type === 'image' ? 'bg-green-50 text-green-600' :
-                                                'bg-blue-50 text-blue-600'
-                                        }`}>
-                                        <Icon className="w-6 h-6" />
-                                    </div>
-                                    <div className="min-w-0">
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <span className="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
-                                                Week {material.weeks?.week_number || "?"}
-                                            </span>
-                                            <span className="text-xs text-gray-400">
-                                                {new Date(material.created_at).toLocaleDateString()}
-                                            </span>
+                            return (
+                                <div key={material.id} className="p-4 hover:bg-gray-50 transition-colors flex items-center justify-between group">
+                                    <div className="flex items-center gap-4 flex-1 min-w-0">
+                                        <div className={`p-3 rounded-lg shrink-0 ${material.type === 'pdf' ? 'bg-red-50 text-red-600' :
+                                            material.type === 'video' ? 'bg-purple-50 text-purple-600' :
+                                                material.type === 'image' ? 'bg-green-50 text-green-600' :
+                                                    'bg-blue-50 text-blue-600'
+                                            }`}>
+                                            <Icon className="w-6 h-6" />
                                         </div>
-                                        <h3 className="font-bold text-gray-900 truncate">
-                                            {material.title}
-                                        </h3>
-                                        <p className="text-sm text-gray-500 truncate max-w-xl">
-                                            {material.description || material.content_url}
-                                        </p>
+                                        <div className="min-w-0">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <span className="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
+                                                    Week {material.weeks?.week_number || "?"}
+                                                </span>
+                                                <span className="text-xs text-gray-400">
+                                                    {new Date(material.created_at).toLocaleDateString()}
+                                                </span>
+                                            </div>
+                                            <h3 className="font-bold text-gray-900 truncate">
+                                                {material.title}
+                                            </h3>
+                                            <p className="text-sm text-gray-500 truncate max-w-xl">
+                                                {material.description || material.content_url}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-2">
+                                        {material.content_url && (
+                                            <a
+                                                href={material.content_url}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
+                                                title="보기/다운로드"
+                                            >
+                                                <Download className="w-5 h-5" />
+                                            </a>
+                                        )}
+                                        {isInstructor && (
+                                            <>
+                                                <button onClick={() => handleEditClick(material)} className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-full transition-colors">
+                                                    <Edit2 className="w-5 h-5" />
+                                                </button>
+                                                <button onClick={() => handleDeleteClick(material.id)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors">
+                                                    <Trash2 className="w-5 h-5" />
+                                                </button>
+                                            </>
+                                        )}
                                     </div>
                                 </div>
-
-                                <div className="flex items-center gap-2">
-                                    {material.content_url && (
-                                        <a
-                                            href={material.content_url}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
-                                            title="보기/다운로드"
-                                        >
-                                            <Download className="w-5 h-5" />
-                                        </a>
-                                    )}
-                                    {isInstructor && (
-                                        <>
-                                            <button onClick={() => handleEditClick(material)} className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-full transition-colors">
-                                                <Edit2 className="w-5 h-5" />
-                                            </button>
-                                            <button onClick={() => handleDeleteClick(material.id)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors">
-                                                <Trash2 className="w-5 h-5" />
-                                            </button>
-                                        </>
-                                    )}
-                                </div>
-                            </div>
-                        );
-                    })
-                )}
+                            );
+                        })
+                    )}
+                </div>
             </div>
 
             {/* Modal */}

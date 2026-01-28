@@ -149,7 +149,19 @@ export default function DashboardPage() {
             : "학습자님";
 
     return (
-        <div className="space-y-10 pb-10">
+        <div className="h-full overflow-y-auto p-4 md:p-8 space-y-10 pb-10 custom-scrollbar">
+            <style jsx>{`
+                .custom-scrollbar::-webkit-scrollbar {
+                    width: 6px;
+                }
+                .custom-scrollbar::-webkit-scrollbar-track {
+                    background: transparent;
+                }
+                .custom-scrollbar::-webkit-scrollbar-thumb {
+                    background-color: #e5e7eb;
+                    border-radius: 20px;
+                }
+            `}</style>
             {/* Hero Section */}
             <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-700 text-white shadow-lg">
                 <div className="absolute top-0 right-0 -mr-20 -mt-20 w-96 h-96 bg-white/10 rounded-full blur-3xl pointer-events-none"></div>

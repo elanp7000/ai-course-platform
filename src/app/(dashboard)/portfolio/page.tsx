@@ -616,9 +616,9 @@ function PortfolioContent() {
         : "학습한 결과물을 공유하고 서로 피드백을 주고받으세요.";
 
     return (
-        <div className={`flex min-h-[calc(100vh-4rem)] ${showInstructorSidebar ? '-m-4 md:-m-8 h-[calc(100vh-4rem)] bg-gray-50/50' : 'max-w-7xl mx-auto pb-20'}`}>
+        <div className={`flex w-full h-full overflow-hidden ${showInstructorSidebar ? 'bg-gray-50/50' : ''}`}>
             {showInstructorSidebar && (
-                <div className="w-72 flex flex-col h-full sticky top-0 hidden lg:flex z-10">
+                <div className="w-72 flex-none flex flex-col h-full border-r border-gray-100 bg-white z-10 hidden lg:flex">
                     {/* Decorative Top Tab/Badge */}
                     <div className="px-6 pt-6 bg-transparent">
                         <div className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-orange-500 to-orange-400 text-white rounded-t-xl shadow-sm font-bold text-lg relative top-[1px] z-20">
@@ -672,8 +672,8 @@ function PortfolioContent() {
                 </div>
             )}
 
-            <div className={`flex-1 p-8 ${showInstructorSidebar ? 'overflow-y-auto' : ''}`}>
-                <div className="sticky top-0 z-10 bg-gray-50 pt-2 pb-6">
+            <div className={`flex-1 flex flex-col min-w-0 h-full ${!showInstructorSidebar ? 'max-w-7xl mx-auto w-full' : ''}`}>
+                <div className="flex-none pt-8 px-4 md:px-8 pb-6 bg-gray-50/50">
                     <div className="flex items-center justify-between">
                         <div>
                             <h1 className="text-3xl font-bold text-gray-900">
@@ -708,115 +708,117 @@ function PortfolioContent() {
                     </div>
                 </div>
 
-                {isLoading ? (
-                    <div className="flex justify-center py-20">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                    </div>
-                ) : items.length === 0 ? (
-                    <div className="bg-white rounded-xl border border-dashed p-12 text-center text-gray-500">
-                        <User className="w-10 h-10 mx-auto mb-4 text-gray-300" />
-                        {selectedStudentId
-                            ? "이 학습자의 프로젝트가 없습니다."
-                            : "등록된 프로젝트가 없습니다. + 프로젝트 추가를 눌러 만들어보세요!"
-                        }
-                    </div>
-                ) : isMyView ? (
-                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {items.map((item) => renderCard(item))}
-                    </div>
-                ) : (
-                    <div className="space-y-12">
-                        {topics.map((topic, index) => {
-                            const topicItems = items.filter(item => item.topic_id === topic.id);
+                <div className="flex-1 overflow-y-auto px-4 md:px-8 pb-8 custom-scrollbar">
+                    {isLoading ? (
+                        <div className="flex justify-center py-20">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                        </div>
+                    ) : items.length === 0 ? (
+                        <div className="bg-white rounded-xl border border-dashed p-12 text-center text-gray-500">
+                            <User className="w-10 h-10 mx-auto mb-4 text-gray-300" />
+                            {selectedStudentId
+                                ? "이 학습자의 프로젝트가 없습니다."
+                                : "등록된 프로젝트가 없습니다. + 프로젝트 추가를 눌러 만들어보세요!"
+                            }
+                        </div>
+                    ) : isMyView ? (
+                        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {items.map((item) => renderCard(item))}
+                        </div>
+                    ) : (
+                        <div className="space-y-12">
+                            {topics.map((topic, index) => {
+                                const topicItems = items.filter(item => item.topic_id === topic.id);
 
-                            return (
-                                <section key={topic.id} className="space-y-6">
-                                    <div className="bg-gradient-to-r from-green-600 to-green-500 text-white px-6 py-4 rounded-xl shadow-md flex justify-between items-center group/topic">
-                                        <div>
-                                            {topic.link_url ? (
-                                                <a
-                                                    href={topic.link_url}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="text-xl font-bold text-white hover:underline flex items-center gap-2"
-                                                >
-                                                    {topic.title}
-                                                    <ExternalLink className="w-5 h-5 text-green-100" />
-                                                </a>
-                                            ) : (
-                                                <h2 className="text-xl font-bold text-white">{topic.title}</h2>
-                                            )}
-                                            {topic.description && <p className="text-green-50 text-sm mt-1">{topic.description}</p>}
-                                        </div>
-                                        {userRole === 'instructor' && (
-                                            <div className="flex gap-1 opacity-0 group-hover/topic:opacity-100 transition-opacity">
-                                                <div className="flex gap-0.5 mr-2 border-r border-white/20 pr-2">
-                                                    {index > 0 && (
-                                                        <button
-                                                            onClick={() => handleMoveTopic(topic, 'up')}
-                                                            className="p-1.5 text-white/80 hover:text-white hover:bg-white/20 rounded-lg transition-colors"
-                                                            title="위로 이동"
-                                                        >
-                                                            <ArrowUp className="w-4 h-4" />
-                                                        </button>
-                                                    )}
-                                                    {index < topics.length - 1 && (
-                                                        <button
-                                                            onClick={() => handleMoveTopic(topic, 'down')}
-                                                            className="p-1.5 text-white/80 hover:text-white hover:bg-white/20 rounded-lg transition-colors"
-                                                            title="아래로 이동"
-                                                        >
-                                                            <ArrowDown className="w-4 h-4" />
-                                                        </button>
-                                                    )}
+                                return (
+                                    <section key={topic.id} className="space-y-6">
+                                        <div className="bg-gradient-to-r from-green-600 to-green-500 text-white px-6 py-4 rounded-xl shadow-md flex justify-between items-center group/topic">
+                                            <div>
+                                                {topic.link_url ? (
+                                                    <a
+                                                        href={topic.link_url}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="text-xl font-bold text-white hover:underline flex items-center gap-2"
+                                                    >
+                                                        {topic.title}
+                                                        <ExternalLink className="w-5 h-5 text-green-100" />
+                                                    </a>
+                                                ) : (
+                                                    <h2 className="text-xl font-bold text-white">{topic.title}</h2>
+                                                )}
+                                                {topic.description && <p className="text-green-50 text-sm mt-1">{topic.description}</p>}
+                                            </div>
+                                            {userRole === 'instructor' && (
+                                                <div className="flex gap-1 opacity-0 group-hover/topic:opacity-100 transition-opacity">
+                                                    <div className="flex gap-0.5 mr-2 border-r border-white/20 pr-2">
+                                                        {index > 0 && (
+                                                            <button
+                                                                onClick={() => handleMoveTopic(topic, 'up')}
+                                                                className="p-1.5 text-white/80 hover:text-white hover:bg-white/20 rounded-lg transition-colors"
+                                                                title="위로 이동"
+                                                            >
+                                                                <ArrowUp className="w-4 h-4" />
+                                                            </button>
+                                                        )}
+                                                        {index < topics.length - 1 && (
+                                                            <button
+                                                                onClick={() => handleMoveTopic(topic, 'down')}
+                                                                className="p-1.5 text-white/80 hover:text-white hover:bg-white/20 rounded-lg transition-colors"
+                                                                title="아래로 이동"
+                                                            >
+                                                                <ArrowDown className="w-4 h-4" />
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                    <button
+                                                        onClick={() => openEditTopicModal(topic)}
+                                                        className="p-1.5 text-white/80 hover:text-white hover:bg-white/20 rounded-lg transition-colors"
+                                                        title="주제 수정"
+                                                    >
+                                                        <Pencil className="w-4 h-4" />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDeleteTopic(topic.id)}
+                                                        className="p-1.5 text-white/80 hover:text-red-200 hover:bg-white/20 rounded-lg transition-colors"
+                                                        title="주제 삭제"
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </button>
                                                 </div>
-                                                <button
-                                                    onClick={() => openEditTopicModal(topic)}
-                                                    className="p-1.5 text-white/80 hover:text-white hover:bg-white/20 rounded-lg transition-colors"
-                                                    title="주제 수정"
-                                                >
-                                                    <Pencil className="w-4 h-4" />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDeleteTopic(topic.id)}
-                                                    className="p-1.5 text-white/80 hover:text-red-200 hover:bg-white/20 rounded-lg transition-colors"
-                                                    title="주제 삭제"
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
+                                            )}
+                                        </div>
+                                        {topicItems.length > 0 ? (
+                                            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                                {topicItems.map(item => renderCard(item))}
+                                            </div>
+                                        ) : (
+                                            <div className="py-8 text-center text-gray-400 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                                                아직 제출된 과제가 없습니다.
                                             </div>
                                         )}
-                                    </div>
-                                    {topicItems.length > 0 ? (
+                                    </section>
+                                );
+                            })}
+
+                            {(() => {
+                                const uncategorizedItems = items.filter(item => !item.topic_id && item.type === 'portfolio');
+                                if (uncategorizedItems.length === 0) return null;
+
+                                return (
+                                    <section className="space-y-6">
+                                        <div className="bg-white px-6 py-4 rounded-xl border-l-4 border-gray-400 shadow-sm">
+                                            <h2 className="text-xl font-bold text-gray-700">자유 프로젝트 (미분류)</h2>
+                                        </div>
                                         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                            {topicItems.map(item => renderCard(item))}
+                                            {uncategorizedItems.map(item => renderCard(item))}
                                         </div>
-                                    ) : (
-                                        <div className="py-8 text-center text-gray-400 bg-gray-50 rounded-xl border border-dashed border-gray-200">
-                                            아직 제출된 과제가 없습니다.
-                                        </div>
-                                    )}
-                                </section>
-                            );
-                        })}
-
-                        {(() => {
-                            const uncategorizedItems = items.filter(item => !item.topic_id && item.type === 'portfolio');
-                            if (uncategorizedItems.length === 0) return null;
-
-                            return (
-                                <section className="space-y-6">
-                                    <div className="bg-white px-6 py-4 rounded-xl border-l-4 border-gray-400 shadow-sm">
-                                        <h2 className="text-xl font-bold text-gray-700">자유 프로젝트 (미분류)</h2>
-                                    </div>
-                                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                        {uncategorizedItems.map(item => renderCard(item))}
-                                    </div>
-                                </section>
-                            );
-                        })()}
-                    </div>
-                )}
+                                    </section>
+                                );
+                            })()}
+                        </div>
+                    )}
+                </div>
             </div>
 
             {isModalOpen && (
