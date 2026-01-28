@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, Suspense } from "react";
 import ReactMarkdown from "react-markdown";
 import { supabase } from "@/utils/supabase/client";
-import { Plus, Pencil, Trash2, X, Globe, User, FileCode, Users, FolderInput, ArrowUp, ArrowDown, ExternalLink } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Globe, User, FileCode, Users, FolderInput, ArrowUp, ArrowDown, ExternalLink, MonitorCloud } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 
 interface UnifiedItem {
@@ -619,37 +619,63 @@ function PortfolioContent() {
         : "학습한 결과물을 공유하고 서로 피드백을 주고받으세요.";
 
     return (
-        <div className="max-w-7xl mx-auto pb-20 flex min-h-[calc(100vh-4rem)]">
+        <div className={`flex min-h-[calc(100vh-4rem)] ${showInstructorSidebar ? '-m-4 md:-m-8 h-[calc(100vh-4rem)] bg-gray-50/50' : 'max-w-7xl mx-auto pb-20'}`}>
             {showInstructorSidebar && (
-                <div className="w-64 border-r bg-white flex flex-col h-full sticky top-0 overflow-y-auto hidden lg:flex">
-                    <div className="p-4 border-b">
-                        <h2 className="font-bold text-gray-900 flex items-center gap-2">
-                            <Users className="w-5 h-5" />
+                <div className="w-72 flex flex-col h-full sticky top-0 hidden lg:flex z-10">
+                    {/* Decorative Top Tab/Badge */}
+                    <div className="px-6 pt-6 bg-transparent">
+                        <div className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-orange-500 to-orange-400 text-white rounded-t-xl shadow-sm font-bold text-lg relative top-[1px] z-20">
+                            <MonitorCloud className="w-5 h-5" />
                             학습자 목록
-                        </h2>
+                        </div>
                     </div>
-                    <div className="flex-1 p-2 space-y-1">
-                        <button
-                            onClick={() => setSelectedStudentId(null)}
-                            className={`w-full text-left px-4 py-2 rounded-lg text-sm font-medium transition-colors ${!selectedStudentId ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-50'}`}
-                        >
-                            내 활동 내역 (강사)
-                        </button>
-                        {students.map(student => (
+
+                    {/* Main Sidebar Card */}
+                    <div className="flex-1 bg-white ml-4 mr-0 rounded-tr-xl rounded-br-2xl shadow-[4px_0_24px_-4px_rgba(0,0,0,0.05)] border-r border-t border-b border-gray-100 flex flex-col overflow-hidden">
+                        <div className="flex-1 overflow-y-auto p-3 space-y-1 custom-scrollbar">
+                            <style jsx>{`
+                                .custom-scrollbar::-webkit-scrollbar {
+                                    width: 6px;
+                                }
+                                .custom-scrollbar::-webkit-scrollbar-track {
+                                    background: transparent;
+                                }
+                                .custom-scrollbar::-webkit-scrollbar-thumb {
+                                    background-color: #e5e7eb;
+                                    border-radius: 20px;
+                                }
+                            `}</style>
+
                             <button
-                                key={student.id}
-                                onClick={() => setSelectedStudentId(student.id)}
-                                className={`w-full text-left px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${selectedStudentId === student.id ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-50'}`}
+                                onClick={() => setSelectedStudentId(null)}
+                                className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 flex items-center gap-3 group ${!selectedStudentId ? 'bg-orange-50 text-orange-700 shadow-sm ring-1 ring-orange-100' : 'text-gray-600 hover:bg-gray-50'}`}
                             >
-                                <div className="w-2 h-2 rounded-full bg-gray-300"></div>
-                                {student.name || student.email}
+                                <div className={`p-2 rounded-full ${!selectedStudentId ? 'bg-orange-100 text-orange-600' : 'bg-gray-100 text-gray-400 group-hover:bg-white group-hover:text-gray-600'} transition-colors`}>
+                                    <User className="w-4 h-4" />
+                                </div>
+                                <span>내 활동 내역 (강사)</span>
                             </button>
-                        ))}
+
+                            <div className="h-px bg-gray-100 my-2 mx-2" />
+
+                            {students.map(student => (
+                                <button
+                                    key={student.id}
+                                    onClick={() => setSelectedStudentId(student.id)}
+                                    className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 flex items-center gap-3 group ${selectedStudentId === student.id ? 'bg-blue-50 text-blue-700 shadow-sm ring-1 ring-blue-100' : 'text-gray-600 hover:bg-gray-50'}`}
+                                >
+                                    <div className={`p-2 rounded-full ${selectedStudentId === student.id ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-400 group-hover:bg-white group-hover:text-gray-600'} transition-colors`}>
+                                        <User className="w-4 h-4" />
+                                    </div>
+                                    <span className="truncate">{student.name || student.email}</span>
+                                </button>
+                            ))}
+                        </div>
                     </div>
                 </div>
             )}
 
-            <div className="flex-1 p-8">
+            <div className={`flex-1 p-8 ${showInstructorSidebar ? 'overflow-y-auto' : ''}`}>
                 <div className="flex items-center justify-between mb-8">
                     <div>
                         <h1 className="text-3xl font-bold text-gray-900">
