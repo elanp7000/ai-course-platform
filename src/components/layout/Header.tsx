@@ -38,7 +38,7 @@ export function Header() {
     };
 
     return (
-        <header className="h-16 bg-white border-b flex items-center justify-between px-6 sticky top-0 z-10">
+        <header className="h-[88px] bg-white border-b flex items-center justify-between px-6 sticky top-0 z-10">
             <button className="md:hidden p-2 -ml-2 text-gray-600">
                 <Menu className="w-6 h-6" />
             </button>

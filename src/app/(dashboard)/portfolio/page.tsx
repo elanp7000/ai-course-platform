@@ -110,21 +110,22 @@ function PortfolioContent() {
             .order('created_at', { ascending: false });
 
         // Logic:
-        // 1. My View: Always filter by MY ID.
-        // 2. Instructor Normal View:
-        //    - Filter by selectedStudentId if set.
-        //    - Else show ALL.
-        // 3. Student Normal View (Experiment Assignments):
-        //    - Show ALL (Community).
+        // 1. My View (Personal):
+        //    - Instructor:
+        //      - If selectedStudentId -> Show that student's work
+        //      - Else -> Show MY work
+        //    - Student: Show MY work
+        // 2. Shared View (Community):
+        //    - Show ALL (No filter)
 
         if (isMyView) {
-            query = query.eq('user_id', userId);
-        } else if (role === 'instructor') {
-            if (selectedStudentId) {
+            if (role === 'instructor' && selectedStudentId) {
                 query = query.eq('user_id', selectedStudentId);
+            } else {
+                query = query.eq('user_id', userId);
             }
         }
-        // Else: Student Community View -> No Filter (Show All)
+        // Else: Shared View -> Show All
 
         const { data, error } = await query;
 
@@ -327,7 +328,7 @@ function PortfolioContent() {
     };
 
     // Render Logic
-    const showInstructorSidebar = userRole === 'instructor' && !isMyView;
+    const showInstructorSidebar = userRole === 'instructor' && isMyView;
     const pageTitle = isMyView
         ? "나의 포트폴리오"
         : (userRole === 'instructor' && selectedStudentId
@@ -354,7 +355,7 @@ function PortfolioContent() {
                             onClick={() => setSelectedStudentId(null)}
                             className={`w-full text-left px-4 py-2 rounded-lg text-sm font-medium transition-colors ${!selectedStudentId ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-50'}`}
                         >
-                            전체 보기
+                            내 활동 내역 (강사)
                         </button>
                         {students.map(student => (
                             <button
@@ -382,14 +383,30 @@ function PortfolioContent() {
                         </p>
                     </div>
 
-                    {/* Only show 'Add' button for students OR (optional) instructors who want to post examples */}
-                    <button
-                        onClick={openCreateModal}
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm font-medium"
-                    >
-                        <Plus className="w-5 h-5" />
-                        프로젝트 추가
-                    </button>
+                    {/* Buttons: Only visible in Shared View */}
+                    {!isMyView && (
+                        <div className="flex gap-3">
+                            {/* Instructor Only: Add Assignment */}
+                            {userRole === 'instructor' && (
+                                <button
+                                    onClick={openCreateModal}
+                                    className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-sm font-medium"
+                                >
+                                    <Plus className="w-5 h-5" />
+                                    과제 추가
+                                </button>
+                            )}
+
+                            {/* Everyone: Add Project */}
+                            <button
+                                onClick={openCreateModal}
+                                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm font-medium"
+                            >
+                                <Plus className="w-5 h-5" />
+                                프로젝트 추가
+                            </button>
+                        </div>
+                    )}
                 </div>
 
                 {isLoading ? (

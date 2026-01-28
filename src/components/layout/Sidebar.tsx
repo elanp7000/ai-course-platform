@@ -41,7 +41,7 @@ export function Sidebar() {
 
     return (
         <aside className="w-64 bg-white border-r h-full flex flex-col hidden md:flex">
-            <div className="py-6 border-b flex flex-col items-center justify-center gap-3">
+            <div className="h-[88px] border-b flex flex-col items-center justify-center gap-3">
                 <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
                     <BookOpen className="w-6 h-6 text-blue-600" />
                     <span className="font-bold text-xl text-gray-800">
