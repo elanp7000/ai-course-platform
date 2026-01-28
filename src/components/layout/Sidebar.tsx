@@ -6,23 +6,24 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/utils/supabase/client";
 
 export function Sidebar() {
-    const [userInfo, setUserInfo] = useState<{ name: string; role: string } | null>(null);
+    const [userInfo, setUserInfo] = useState<{ name: string; role: string; status: string } | null>(null);
 
     useEffect(() => {
         const fetchUser = async () => {
             const { data: { session } } = await supabase.auth.getSession();
             if (session?.user) {
-                // Fetch public profile for role and name
+                // Fetch public profile for role, name, and status
                 const { data: profile } = await supabase
                     .from('users')
-                    .select('name, role')
+                    .select('name, role, status')
                     .eq('id', session.user.id)
                     .single();
 
                 if (profile) {
                     setUserInfo({
                         name: profile.name || session.user.email?.split('@')[0] || 'User',
-                        role: profile.role || 'student'
+                        role: profile.role || 'student',
+                        status: profile.status || 'approved' // Default to approved if null (for legacy)
                     });
                 }
             }
@@ -31,13 +32,8 @@ export function Sidebar() {
         fetchUser();
     }, []);
 
-    const getLogoText = () => {
-        if (!userInfo) return "AI Course";
-        if (userInfo.role === 'instructor') return "AI Course 강사";
-        return `AI Course ${userInfo.name}`;
-    };
-
     const isInstructor = userInfo?.role === 'instructor';
+    const isPending = userInfo?.status === 'pending';
 
     return (
         <aside className="w-64 bg-white border-r h-full flex flex-col hidden md:flex">
@@ -54,18 +50,42 @@ export function Sidebar() {
             </div>
 
             <nav className="flex-1 p-4 space-y-1">
-                <NavItem href="/dashboard" icon={Home} label="대시보드" />
-                <NavItem href="/notices" icon={List} label="공지사항" />
-                <NavItem href="/discussions" icon={MessageCircle} label="자유 게시판" />
-                <NavItem href="/materials" icon={Library} label="학습 자료" />
-                <NavItem href="/portfolio" icon={MonitorCloud} label="실습 과제" />
-                {userInfo && (
-                    <NavItem
-                        href="/portfolio?view=my"
-                        icon={User}
-                        label="나의 포트폴리오"
-                        customClass="text-gray-600 hover:bg-gray-50 hover:text-blue-600 font-semibold"
-                    />
+                {isPending ? (
+                    <div className="p-4 text-sm text-gray-500 bg-gray-50 rounded-lg">
+                        승인 대기 중입니다.
+                    </div>
+                ) : (
+                    <>
+                        <NavItem href="/dashboard" icon={Home} label="대시보드" />
+                        <NavItem href="/notices" icon={List} label="공지사항" />
+                        <NavItem href="/materials" icon={Library} label="학습 자료" />
+                        <NavItem href="/discussions" icon={MessageCircle} label="자유 게시판" />
+                        <NavItem href="/portfolio" icon={MonitorCloud} label="실습 과제" />
+                        {userInfo && (
+                            <NavItem
+                                href="/portfolio?view=my"
+                                icon={User}
+                                label="나의 포트폴리오"
+                                customClass="text-gray-600 hover:bg-gray-50 hover:text-blue-600 font-semibold"
+                            />
+                        )}
+                        {isInstructor && (
+                            <>
+                                <div className="pt-4 pb-2">
+                                    <div className="border-t my-2"></div>
+                                    <p className="px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                                        관리자 메뉴
+                                    </p>
+                                </div>
+                                <NavItem
+                                    href="/admin/users"
+                                    icon={User}
+                                    label="회원 관리"
+                                    customClass="text-purple-600 hover:bg-purple-50 hover:text-purple-700 font-semibold"
+                                />
+                            </>
+                        )}
+                    </>
                 )}
             </nav>
         </aside>

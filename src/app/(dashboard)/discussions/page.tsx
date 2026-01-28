@@ -176,9 +176,9 @@ export default function DiscussionsPage() {
                         <div key={item.id} className="bg-white rounded-xl border p-6 hover:shadow-md transition-shadow">
                             <div className="flex justify-between items-start mb-4">
                                 <div className="flex items-start gap-4">
-                                    <div className="p-2 bg-gray-100 rounded-full">
-                                        <UserIcon className="w-5 h-5 text-gray-500" />
-                                    </div>
+                                    <span className="text-xs px-2 py-1 rounded font-bold shrink-0 bg-green-100 text-green-700 mt-0.5">
+                                        질문/토론
+                                    </span>
                                     <div>
                                         <h3 className="text-lg font-bold text-gray-900 mb-1">{item.title}</h3>
                                         <div className="flex items-center gap-2 text-sm text-gray-500">
@@ -207,7 +207,7 @@ export default function DiscussionsPage() {
                                     </div>
                                 )}
                             </div>
-                            <div className="prose prose-sm max-w-none text-gray-600 whitespace-pre-wrap pl-14">
+                            <div className="prose prose-sm max-w-none text-gray-600 whitespace-pre-wrap">
                                 {item.content}
                             </div>
                         </div>

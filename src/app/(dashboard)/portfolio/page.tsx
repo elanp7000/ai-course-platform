@@ -659,9 +659,9 @@ function PortfolioContent() {
                                 <button
                                     key={student.id}
                                     onClick={() => setSelectedStudentId(student.id)}
-                                    className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 flex items-center gap-3 group ${selectedStudentId === student.id ? 'bg-blue-50 text-blue-700 shadow-sm ring-1 ring-blue-100' : 'text-gray-600 hover:bg-gray-50'}`}
+                                    className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 flex items-center gap-3 group ${selectedStudentId === student.id ? 'bg-orange-50 text-orange-700 shadow-sm ring-1 ring-orange-100' : 'text-gray-600 hover:bg-gray-50'}`}
                                 >
-                                    <div className={`p-2 rounded-full ${selectedStudentId === student.id ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-400 group-hover:bg-white group-hover:text-gray-600'} transition-colors`}>
+                                    <div className={`p-2 rounded-full ${selectedStudentId === student.id ? 'bg-orange-100 text-orange-600' : 'bg-gray-100 text-gray-400 group-hover:bg-white group-hover:text-gray-600'} transition-colors`}>
                                         <User className="w-4 h-4" />
                                     </div>
                                     <span className="truncate">{student.name || student.email}</span>
@@ -697,7 +697,7 @@ function PortfolioContent() {
 
                             <button
                                 onClick={() => openCreateModal('project')}
-                                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm font-medium"
+                                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-sm font-medium"
                             >
                                 <Plus className="w-5 h-5" />
                                 게시물 등록
