@@ -625,7 +625,7 @@ function PortfolioContent() {
                     {/* Decorative Top Tab/Badge */}
                     <div className="px-6 pt-6 bg-transparent">
                         <div className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-orange-500 to-orange-400 text-white rounded-t-xl shadow-sm font-bold text-lg relative top-[1px] z-20">
-                            <MonitorCloud className="w-5 h-5" />
+                            <Users className="w-5 h-5" />
                             학습자 목록
                         </div>
                     </div>
