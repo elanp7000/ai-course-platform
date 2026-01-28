@@ -268,36 +268,43 @@ export default function MaterialsPage() {
 
     const handleMoveMaterial = async (id: string, direction: 'up' | 'down', e: React.MouseEvent) => {
         e.stopPropagation();
+        if (isFiltering) {
+            alert("순서 변경은 '전체' 보기 상태에서만 가능합니다 (검색/필터 해제 필요).");
+            return;
+        }
 
         const currentIndex = filteredMaterials.findIndex(m => m.id === id);
         if (currentIndex === -1) return;
 
-        const currentItem = filteredMaterials[currentIndex];
         const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
-
         if (targetIndex < 0 || targetIndex >= filteredMaterials.length) return;
-        const targetItem = filteredMaterials[targetIndex];
 
-        // Optimistic update
-        const newMaterials = [...materials];
-        const m1 = newMaterials.find(m => m.id === currentItem.id);
-        const m2 = newMaterials.find(m => m.id === targetItem.id);
+        // Create a new array and normalize sort_order for ALL items to ensure consistency
+        const newMaterials = [...filteredMaterials].map((m, idx) => ({ ...m, sort_order: idx }));
 
-        if (m1 && m2) {
-            const tempOrder = m1.sort_order;
-            m1.sort_order = m2.sort_order;
-            m2.sort_order = tempOrder;
-            setMaterials(newMaterials); // Re-render immediately
+        // Swap in the array
+        const temp = newMaterials[currentIndex];
+        newMaterials[currentIndex] = newMaterials[targetIndex];
+        newMaterials[targetIndex] = temp;
 
-            // DB Update
-            const { error: error1 } = await supabase.from('materials').update({ sort_order: m1.sort_order }).eq('id', m1.id);
-            const { error: error2 } = await supabase.from('materials').update({ sort_order: m2.sort_order }).eq('id', m2.id);
+        // Re-assign sort_order based on new positions
+        const contentUpdates = newMaterials.map((m, idx) => {
+            m.sort_order = idx;
+            return { id: m.id, sort_order: idx };
+        });
 
-            if (error1 || error2) {
-                console.error("Reorder failed", error1, error2);
-                alert("순서 변경 중 오류가 발생했습니다.");
-                fetchData(); // Revert on error
-            }
+        setMaterials(newMaterials); // Optimistic Update
+
+        // Batch Update DB
+        try {
+            const updates = contentUpdates.map(u =>
+                supabase.from('materials').update({ sort_order: u.sort_order }).eq('id', u.id)
+            );
+            await Promise.all(updates);
+        } catch (error) {
+            console.error("Reorder failed", error);
+            alert("순서 저장 중 오류가 발생했습니다.");
+            fetchData(); // Revert
         }
     };
 
@@ -317,6 +324,7 @@ export default function MaterialsPage() {
     };
 
     // Filter Logic
+    const isFiltering = searchTerm !== "" || selectedType !== "all";
     const filteredMaterials = materials.filter(m => {
         const matchesSearch = m.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
             (m.weeks?.title || "").toLowerCase().includes(searchTerm.toLowerCase());
@@ -500,11 +508,21 @@ export default function MaterialsPage() {
                                         )}
                                         {isInstructor && (
                                             <>
-                                                <div className="flex flex-col gap-1 mr-2">
-                                                    <button onClick={(e) => handleMoveMaterial(material.id, 'up', e)} className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors" title="위로 이동">
+                                                <div className={`flex flex-col gap-1 mr-2 ${isFiltering ? 'opacity-30 cursor-not-allowed' : ''}`}>
+                                                    <button
+                                                        onClick={(e) => !isFiltering && handleMoveMaterial(material.id, 'up', e)}
+                                                        className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                                        title={isFiltering ? "필터 적용 중에는 이동 불가" : "위로 이동"}
+                                                        disabled={isFiltering}
+                                                    >
                                                         <ArrowUp className="w-4 h-4" />
                                                     </button>
-                                                    <button onClick={(e) => handleMoveMaterial(material.id, 'down', e)} className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors" title="아래로 이동">
+                                                    <button
+                                                        onClick={(e) => !isFiltering && handleMoveMaterial(material.id, 'down', e)}
+                                                        className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                                        title={isFiltering ? "필터 적용 중에는 이동 불가" : "아래로 이동"}
+                                                        disabled={isFiltering}
+                                                    >
                                                         <ArrowDown className="w-4 h-4" />
                                                     </button>
                                                 </div>
