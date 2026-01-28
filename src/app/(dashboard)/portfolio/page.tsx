@@ -393,7 +393,11 @@ function PortfolioContent() {
     const openCreateModal = (type: 'topic' | 'project') => {
         if (!currentUser) return alert("로그인이 필요합니다.");
         setEditingId(null);
-        setFormData({ title: "", description: "", project_url: "", topic_id: "", link_url: "" });
+
+        // Default to first topic if available, otherwise empty (Free Project)
+        const defaultTopicId = (type === 'project' && topics.length > 0) ? topics[0].id : "";
+
+        setFormData({ title: "", description: "", project_url: "", topic_id: defaultTopicId, link_url: "" });
         setIsTopicModal(type === 'topic');
         setIsMoveOnly(false);
         setIsModalOpen(true);
@@ -515,20 +519,13 @@ function PortfolioContent() {
                 <div className="p-6 flex-1 flex flex-col">
                     <div className="flex justify-between items-start mb-4">
                         <div className="flex items-center gap-2">
-                            <div className={`${isDiscussion ? 'bg-green-100' : 'bg-blue-100'} p-1.5 rounded-full`}>
-                                {isDiscussion ? (
-                                    <Users className={`w-4 h-4 ${isDiscussion ? 'text-green-600' : 'text-blue-600'}`} />
-                                ) : (
-                                    <User className="w-4 h-4 text-blue-600" />
-                                )}
-                            </div>
+                            <span className={`text-xs px-2 py-1 rounded font-bold shrink-0 ${isDiscussion ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
+                                {isDiscussion ? '질문/토론' : '프로젝트'}
+                            </span>
                             <div className="flex flex-col">
                                 <h3 className="text-lg font-bold text-gray-900 line-clamp-1">
                                     {item.title || item.author_name}
                                 </h3>
-                                <span className={`text-xs px-1.5 py-0.5 rounded w-fit ${isDiscussion ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
-                                    {isDiscussion ? '질문/토론' : '프로젝트'}
-                                </span>
                             </div>
                         </div>
 
@@ -894,12 +891,12 @@ function PortfolioContent() {
                                                 onChange={(e) => setFormData({ ...formData, topic_id: e.target.value })}
                                                 className="w-full p-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none bg-white"
                                             >
-                                                <option value="">자유 프로젝트 (미분류)</option>
                                                 {topics.map(topic => (
                                                     <option key={topic.id} value={topic.id}>
                                                         {topic.title}
                                                     </option>
                                                 ))}
+                                                <option value="">자유 프로젝트 (미분류)</option>
                                             </select>
                                         </div>
                                     )}

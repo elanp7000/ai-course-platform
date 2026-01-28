@@ -169,7 +169,7 @@ export default function DashboardPage() {
                                 {loading ? (
                                     <span className="animate-pulse bg-white/20 rounded h-8 w-64 block"></span>
                                 ) : (
-                                    <div className="flex flex-wrap items-center gap-2">
+                                    <div className="flex items-center gap-2">
                                         <span>안녕하세요, {displayName}!</span>
                                         <span className="text-blue-200">AI 마스터 여정을 계속해볼까요?</span>
                                     </div>
@@ -333,7 +333,10 @@ function WeekCard({ week, isInstructor, onEdit, onSetCurrent }: { week: any, isI
                         </span>
                     </div>
 
-                    <h3 className={`font-bold text-xl mb-2 transition-colors ${isUpcoming ? "text-gray-500" : "text-gray-900 group-hover:text-blue-600"}`}>
+                    <h3 className={`font-bold text-xl mb-2 transition-colors ${isInProgress ? "text-blue-600" :
+                        isUpcoming ? "text-gray-500" :
+                            "text-gray-900"
+                        }`}>
                         {week.title}
                     </h3>
                     <p className="text-sm text-gray-400 font-medium mb-3">{week.subtitle}</p>
