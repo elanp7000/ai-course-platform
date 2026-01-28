@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, Suspense } from "react";
 import ReactMarkdown from "react-markdown";
 import { supabase } from "@/utils/supabase/client";
-import { Plus, Pencil, Trash2, X, Globe, User, FileCode, Users, FolderInput, ArrowUp, ArrowDown, ExternalLink, MonitorCloud } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Globe, User, FileCode, Users, FolderInput, ArrowUp, ArrowDown, ExternalLink, MonitorCloud, MessageCircle } from "lucide-react";
 import CommentSection from "@/components/comments/CommentSection";
 import { useSearchParams } from "next/navigation";
 
@@ -17,6 +17,7 @@ interface UnifiedItem {
     author_name?: string;
     type: 'portfolio' | 'discussion';
     topic_id?: string;
+    comment_count?: number;
 }
 
 interface Topic {
@@ -129,7 +130,7 @@ function PortfolioContent() {
         // 1. Fetch Portfolios
         let portfolioQuery = supabase
             .from('portfolios')
-            .select('*')
+            .select('*, comments(id)')
             .order('created_at', { ascending: false });
 
         if (isMyView) {
@@ -141,14 +142,14 @@ function PortfolioContent() {
         }
 
         const { data: pData, error: pError } = await portfolioQuery;
-        if (pData) portfolios = pData.map(p => ({ ...p, type: 'portfolio' }));
+        if (pData) portfolios = pData.map(p => ({ ...p, type: 'portfolio', comment_count: p.comments?.length || 0 }));
         if (pError) console.error("Error fetching portfolios:", pError);
 
         // 2. Fetch Discussions (ONLY if isMyView)
         if (isMyView) {
             let discussionQuery = supabase
                 .from('discussions')
-                .select('*')
+                .select('*, comments(id)')
                 .order('created_at', { ascending: false });
 
             let targetUserId = userId;
@@ -167,7 +168,8 @@ function PortfolioContent() {
                     created_at: d.created_at,
                     user_id: d.author_id,
                     author_name: d.author_name,
-                    type: 'discussion'
+                    type: 'discussion',
+                    comment_count: d.comments?.length || 0
                 }));
             }
             if (dError) console.error("Error fetching discussions:", dError);
@@ -596,9 +598,17 @@ function PortfolioContent() {
                         <span className="text-xs text-gray-400">
                             {new Date(item.created_at).toLocaleDateString()}
                         </span>
-                        <span className="text-xs text-gray-500 font-medium">
-                            {item.author_name || "익명"}
-                        </span>
+                        <div className="flex items-center gap-2">
+                            {(item.comment_count || 0) > 0 && (
+                                <div className="flex items-center gap-1 text-xs text-gray-500 mr-2">
+                                    <MessageCircle className="w-3.5 h-3.5" />
+                                    <span>{item.comment_count}</span>
+                                </div>
+                            )}
+                            <span className="text-xs text-gray-500 font-medium">
+                                {item.author_name || "익명"}
+                            </span>
+                        </div>
                     </div>
                 </div>
             </div>
