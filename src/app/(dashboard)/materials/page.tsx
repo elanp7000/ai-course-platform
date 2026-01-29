@@ -17,6 +17,7 @@ type Material = {
     created_at: string;
     sort_order: number;
     weeks?: { title: string, week_number: number }; // Joined data
+    is_visible?: boolean;
 };
 
 type Week = {
@@ -54,7 +55,8 @@ export default function MaterialsPage() {
         title: "",
         type: "link" as Material['type'],
         content_url: "",
-        description: "" // Now supports Markdown
+        description: "", // Now supports Markdown
+        is_visible: true
     });
     const [file, setFile] = useState<File | null>(null);
 
@@ -224,7 +226,8 @@ export default function MaterialsPage() {
                     title: formData.title,
                     type: formData.type,
                     description: formData.description,
-                    content_url: finalContentUrl
+                    content_url: finalContentUrl,
+                    is_visible: formData.is_visible
                 }).eq('id', editingMaterial.id);
 
                 if (error) throw error;
@@ -234,7 +237,8 @@ export default function MaterialsPage() {
                     title: formData.title,
                     type: formData.type,
                     description: formData.description,
-                    content_url: finalContentUrl
+                    content_url: finalContentUrl,
+                    is_visible: formData.is_visible
                 });
 
                 if (error) throw error;
@@ -260,7 +264,8 @@ export default function MaterialsPage() {
             title: item.title,
             type: item.type,
             content_url: item.content_url || "",
-            description: item.description || ""
+            description: item.description || "",
+            is_visible: item.is_visible ?? true
         });
         setFile(null);
         setIsAdding(true);
@@ -319,7 +324,7 @@ export default function MaterialsPage() {
     const handleCloseModal = () => {
         setIsAdding(false);
         setEditingMaterial(null);
-        setFormData({ week_id: "", title: "", type: "link", content_url: "", description: "" });
+        setFormData({ week_id: "", title: "", type: "link", content_url: "", description: "", is_visible: true });
         setFile(null);
     };
 
@@ -469,7 +474,7 @@ export default function MaterialsPage() {
                             return (
                                 <div
                                     key={material.id}
-                                    className="p-4 hover:bg-gray-50 transition-colors flex items-center justify-between group cursor-pointer"
+                                    className={`p-4 hover:bg-gray-50 transition-colors flex items-center justify-between group cursor-pointer ${!material.is_visible ? 'bg-gray-50 opacity-75' : ''}`}
                                     onClick={() => setViewingMaterial(material)}
                                 >
                                     <div className="flex items-center gap-4 flex-1 min-w-0">
@@ -484,8 +489,13 @@ export default function MaterialsPage() {
                                         <div className="min-w-0">
                                             <div className="flex items-center gap-2 mb-1">
                                                 <span className="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
-                                                    Week {material.weeks?.week_number || "?"}
+                                                    {material.weeks?.week_number === 0 ? "공통" : `Week ${material.weeks?.week_number || "?"}`}
                                                 </span>
+                                                {!material.is_visible && (
+                                                    <span className="text-xs font-bold text-gray-500 bg-gray-200 px-2 py-0.5 rounded">
+                                                        비공개
+                                                    </span>
+                                                )}
                                             </div>
                                             <h3 className="font-bold text-gray-900 truncate">
                                                 {material.title}
@@ -568,7 +578,9 @@ export default function MaterialsPage() {
                                             >
                                                 <option value="">주차를 선택하세요</option>
                                                 {weeks.map(week => (
-                                                    <option key={week.id} value={week.id}>{week.week_number}주차 - {week.title}</option>
+                                                    <option key={week.id} value={week.id}>
+                                                        {week.week_number === 0 ? "[공통] 공통 학습 자료" : `${week.week_number}주차 - ${week.title}`}
+                                                    </option>
                                                 ))}
                                             </select>
                                         </div>
@@ -728,6 +740,26 @@ export default function MaterialsPage() {
                                             </div>
                                         </div>
                                     </div>
+                                    {/* Visibility Toggle */}
+                                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border">
+                                        <span className={`text-sm font-medium ${formData.is_visible ? "text-blue-600" : "text-gray-500"}`}>
+                                            {formData.is_visible ? "학생들에게 공개됨" : "학생들에게 숨김 (비공개)"}
+                                        </span>
+                                        <div className="flex-1" />
+                                        <button
+                                            type="button"
+                                            onClick={() => setFormData({ ...formData, is_visible: !formData.is_visible })}
+                                            className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${formData.is_visible ? 'bg-blue-600' : 'bg-gray-200'
+                                                }`}
+                                        >
+                                            <span
+                                                aria-hidden="true"
+                                                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${formData.is_visible ? 'translate-x-5' : 'translate-x-0'
+                                                    }`}
+                                            />
+                                        </button>
+                                    </div>
+
                                 </form>
                             </div>
 
@@ -749,8 +781,8 @@ export default function MaterialsPage() {
                                     {editingMaterial ? "수정완료" : "자료등록"}
                                 </button>
                             </div>
-                        </div>
-                    </div>
+                        </div >
+                    </div >
                 )
             }
 
@@ -764,7 +796,7 @@ export default function MaterialsPage() {
                                 <div>
                                     <div className="flex items-center gap-2 mb-2">
                                         <span className="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
-                                            Week {viewingMaterial.weeks?.week_number || "?"}
+                                            {viewingMaterial.weeks?.week_number === 0 ? "공통" : `Week ${viewingMaterial.weeks?.week_number || "?"}`}
                                         </span>
                                         {viewingMaterial.type === 'ai_tool' && (
                                             <span className="text-xs font-bold text-indigo-600 bg-indigo-100 px-2 py-0.5 rounded">AI 도구</span>
