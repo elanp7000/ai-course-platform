@@ -12,6 +12,7 @@ type Material = {
     type: 'video' | 'text' | 'pdf' | 'link' | 'image' | 'html';
     content_url?: string;
     description?: string;
+    is_visible?: boolean;
 };
 
 type Week = {
@@ -33,7 +34,7 @@ export default function WeekDetailPage() {
     const [isInstructor, setIsInstructor] = useState(false);
     const [isAdding, setIsAdding] = useState(false);
     const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
-    const [newMaterial, setNewMaterial] = useState({ title: '', type: 'link', description: '', content_url: '' });
+    const [newMaterial, setNewMaterial] = useState({ title: '', type: 'link', description: '', content_url: '', is_visible: true });
 
     // File Upload State
     const [file, setFile] = useState<File | null>(null);
@@ -128,7 +129,8 @@ export default function WeekDetailPage() {
                     title: newMaterial.title,
                     type: newMaterial.type,
                     description: newMaterial.description,
-                    content_url: finalContentUrl
+                    content_url: finalContentUrl,
+                    is_visible: newMaterial.is_visible
                 }).eq('id', editingMaterial.id);
 
                 if (error) throw error;
@@ -141,7 +143,8 @@ export default function WeekDetailPage() {
                     title: newMaterial.title,
                     type: newMaterial.type as any,
                     description: newMaterial.description,
-                    content_url: finalContentUrl
+                    content_url: finalContentUrl,
+                    is_visible: newMaterial.is_visible
                 }).select().single();
 
                 if (error) throw error;
@@ -151,7 +154,9 @@ export default function WeekDetailPage() {
             // Reset
             setIsAdding(false);
             setEditingMaterial(null);
-            setNewMaterial({ title: '', type: 'link', description: '', content_url: '' });
+            setEditingMaterial(null);
+            setNewMaterial({ title: '', type: 'link', description: '', content_url: '', is_visible: true });
+            setFile(null);
             setFile(null);
         } catch (error: any) {
             console.error("Save Error:", error);
@@ -167,7 +172,8 @@ export default function WeekDetailPage() {
             title: material.title,
             type: material.type,
             description: material.description || '',
-            content_url: material.content_url || ''
+            content_url: material.content_url || '',
+            is_visible: material.is_visible ?? true
         });
         setFile(null);
         setIsAdding(true);
@@ -252,7 +258,7 @@ export default function WeekDetailPage() {
                         <button onClick={() => {
                             setIsAdding(false);
                             setEditingMaterial(null);
-                            setNewMaterial({ title: '', type: 'link', description: '', content_url: '' });
+                            setNewMaterial({ title: '', type: 'link', description: '', content_url: '', is_visible: true });
                             setFile(null);
                         }} className="text-gray-400 hover:text-gray-600">
                             <X className="w-5 h-5" />
@@ -325,6 +331,27 @@ export default function WeekDetailPage() {
                                 rows={2}
                             />
                         </div>
+
+                        {/* Visibility Toggle */}
+                        <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border">
+                            <span className={`text-sm font-medium ${newMaterial.is_visible ? "text-blue-600" : "text-gray-500"}`}>
+                                {newMaterial.is_visible ? "학생들에게 공개됨" : "학생들에게 숨김 (비공개)"}
+                            </span>
+                            <div className="flex-1" />
+                            <button
+                                type="button"
+                                onClick={() => setNewMaterial({ ...newMaterial, is_visible: !newMaterial.is_visible })}
+                                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${newMaterial.is_visible ? 'bg-blue-600' : 'bg-gray-200'
+                                    }`}
+                            >
+                                <span
+                                    aria-hidden="true"
+                                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${newMaterial.is_visible ? 'translate-x-5' : 'translate-x-0'
+                                        }`}
+                                />
+                            </button>
+                        </div>
+
                         <div className="flex justify-end gap-2 pt-2">
                             <button type="button" onClick={() => setIsAdding(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">취소</button>
                             <button type="submit" disabled={isUploading} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
@@ -359,17 +386,20 @@ export default function WeekDetailPage() {
                         return (
                             <div
                                 key={material.id}
-                                className="group bg-white rounded-xl border p-6 hover:border-blue-300 hover:shadow-md transition-all"
+                                className={`group bg-white rounded-xl border p-6 hover:border-blue-300 hover:shadow-md transition-all ${!material.is_visible ? 'opacity-75 bg-gray-50 border-gray-200' : ''}`}
                             >
                                 <div className="flex items-start gap-4">
-                                    <div className="p-3 rounded-lg bg-blue-50 text-blue-600">
+                                    <div className={`p-3 rounded-lg ${!material.is_visible ? 'bg-gray-200 text-gray-500' : 'bg-blue-50 text-blue-600'}`}>
                                         <Icon className="w-6 h-6" />
                                     </div>
 
                                     <div className="flex-1">
                                         <div className="flex justify-between items-start">
-                                            <h3 className="text-lg font-bold mb-1 group-hover:text-blue-700 transition-colors text-gray-900">
+                                            <h3 className="text-lg font-bold mb-1 group-hover:text-blue-700 transition-colors text-gray-900 flex items-center gap-2">
                                                 {material.title}
+                                                {!material.is_visible && (
+                                                    <span className="text-xs px-2 py-0.5 bg-gray-200 text-gray-600 rounded font-bold">비공개</span>
+                                                )}
                                             </h3>
 
                                             {isInstructor && (

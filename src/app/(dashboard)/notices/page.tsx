@@ -10,6 +10,7 @@ interface Notice {
     content: string;
     created_at: string;
     images?: string[];
+    is_visible?: boolean;
 }
 
 export default function NoticesPage() {
@@ -20,7 +21,7 @@ export default function NoticesPage() {
     // Modal State
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingNotice, setEditingNotice] = useState<Notice | null>(null);
-    const [formData, setFormData] = useState({ title: "", content: "" });
+    const [formData, setFormData] = useState({ title: "", content: "", is_visible: true });
     const [selectedFiles, setSelectedFiles] = useState<FileList | null>(null);
     const [uploading, setUploading] = useState(false);
     const [existingImages, setExistingImages] = useState<string[]>([]); // For editing
@@ -97,7 +98,8 @@ export default function NoticesPage() {
                     .update({
                         title: formData.title,
                         content: formData.content,
-                        images: imageUrls
+                        images: imageUrls,
+                        is_visible: formData.is_visible
                     })
                     .eq('id', editingNotice.id);
 
@@ -110,7 +112,8 @@ export default function NoticesPage() {
                     .insert([{
                         title: formData.title,
                         content: formData.content,
-                        images: imageUrls
+                        images: imageUrls,
+                        is_visible: formData.is_visible
                     }]);
 
                 if (error) throw error;
@@ -144,7 +147,7 @@ export default function NoticesPage() {
 
     const openCreateModal = () => {
         setEditingNotice(null);
-        setFormData({ title: "", content: "" });
+        setFormData({ title: "", content: "", is_visible: true });
         setSelectedFiles(null);
         setExistingImages([]);
         setIsModalOpen(true);
@@ -152,7 +155,7 @@ export default function NoticesPage() {
 
     const openEditModal = (notice: Notice) => {
         setEditingNotice(notice);
-        setFormData({ title: notice.title, content: notice.content });
+        setFormData({ title: notice.title, content: notice.content, is_visible: notice.is_visible ?? true });
         setSelectedFiles(null);
         setExistingImages(notice.images || []);
         setIsModalOpen(true);
@@ -161,7 +164,7 @@ export default function NoticesPage() {
     const closeModal = () => {
         setIsModalOpen(false);
         setEditingNotice(null);
-        setFormData({ title: "", content: "" });
+        setFormData({ title: "", content: "", is_visible: true });
         setSelectedFiles(null);
         setExistingImages([]);
     };
@@ -240,6 +243,26 @@ export default function NoticesPage() {
                                     placeholder="제목을 입력하세요"
                                     required
                                 />
+                            </div>
+
+                            {/* Visibility Toggle */}
+                            <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border">
+                                <span className={`text-sm font-medium ${formData.is_visible ? "text-blue-600" : "text-gray-500"}`}>
+                                    {formData.is_visible ? "학생들에게 공개됨" : "학생들에게 숨김 (비공개)"}
+                                </span>
+                                <div className="flex-1" />
+                                <button
+                                    type="button"
+                                    onClick={() => setFormData({ ...formData, is_visible: !formData.is_visible })}
+                                    className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${formData.is_visible ? 'bg-blue-600' : 'bg-gray-200'
+                                        }`}
+                                >
+                                    <span
+                                        aria-hidden="true"
+                                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${formData.is_visible ? 'translate-x-5' : 'translate-x-0'
+                                            }`}
+                                    />
+                                </button>
                             </div>
 
                             {/* Content Area with Integrated Image Upload Toolbar */}
@@ -370,6 +393,11 @@ function NoticeItem({ notice, isInstructor, onEdit, onDelete }: { notice: Notice
                         </h3>
                         {hasImages && !isExpanded && (
                             <ImageIcon className="w-4 h-4 text-gray-400" />
+                        )}
+                        {!notice.is_visible && (
+                            <span className="ml-2 px-2 py-0.5 text-xs font-bold bg-gray-100 text-gray-500 rounded border">
+                                숨김
+                            </span>
                         )}
                     </div>
                     <span className="text-sm text-gray-400">
