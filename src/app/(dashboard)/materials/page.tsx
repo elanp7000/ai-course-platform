@@ -729,14 +729,14 @@ export default function MaterialsPage() {
                                     {/* Rich Description - ReactQuill */}
                                     <div>
                                         <label className="block text-sm font-bold text-gray-700 mb-2">상세 설명</label>
-                                        <div className="bg-white rounded-xl overflow-hidden" style={{ minHeight: '300px' }}>
+                                        <div className="border rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-blue-500 bg-white" style={{ minHeight: '300px' }}>
                                             <ReactQuill
                                                 ref={quillRef}
                                                 theme="snow"
                                                 value={formData.description}
                                                 onChange={(value) => setFormData({ ...formData, description: value })}
                                                 modules={modules}
-                                                className="h-64 mb-12"
+                                                className="h-64"
                                                 placeholder="자료에 대한 상세 설명을 입력하세요."
                                             />
                                         </div>
