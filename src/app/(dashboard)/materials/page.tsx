@@ -553,7 +553,7 @@ export default function MaterialsPage() {
                             return (
                                 <div
                                     key={material.id}
-                                    className={`p - 4 hover: bg - gray - 50 transition - colors flex items - center justify - between group cursor - pointer ${!material.is_visible ? 'bg-gray-50 opacity-75' : ''} `}
+                                    className={`py-6 px-6 hover:bg-gray-50 transition-colors flex items-center justify-between group cursor-pointer ${!material.is_visible ? 'bg-gray-50 opacity-75' : ''} `}
                                     onClick={() => setViewingMaterial(material)}
                                 >
                                     <div className="flex items-center gap-4 flex-1 min-w-0">
