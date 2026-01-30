@@ -329,6 +329,7 @@ export default function MaterialsPage() {
     };
 
     // Filter Logic
+    const isInstructor = userRole === 'instructor';
     const isFiltering = searchTerm !== "" || selectedType !== "all";
     const filteredMaterials = materials.filter(m => {
         const matchesSearch = m.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -337,8 +338,6 @@ export default function MaterialsPage() {
         const matchesVisibility = isInstructor || m.is_visible !== false; // Hide hidden items from students
         return matchesSearch && matchesType && matchesVisibility;
     });
-
-    const isInstructor = userRole === 'instructor';
 
     const MarkdownComponents = {
         a: ({ node, ...props }: any) => {
