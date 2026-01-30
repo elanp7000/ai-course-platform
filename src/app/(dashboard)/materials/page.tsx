@@ -37,6 +37,22 @@ type Week = {
     week_number: number;
 };
 
+const MarkdownComponents = {
+    img: ({ node, ...props }: any) => (
+        <img
+            {...props}
+            style={{ maxWidth: '100%', height: 'auto', borderRadius: '0.5rem', margin: '1rem 0' }}
+            alt={props.alt || ''}
+        />
+    ),
+    a: ({ node, ...props }: any) => (
+        <a {...props} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline" />
+    ),
+    p: ({ node, ...props }: any) => (
+        <p {...props} className="mb-4 text-gray-700 leading-relaxed" />
+    )
+};
+
 export default function MaterialsPage() {
     // Data State
     const [materials, setMaterials] = useState<Material[]>([]);
