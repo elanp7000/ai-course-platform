@@ -138,9 +138,9 @@ export default function DashboardPage() {
     const currentWeek = weeks.find(w => w.is_current);
 
     // Calculate Progress
-    const totalWeeks = weeks.length || 16;
+    const totalWeeks = 16;
     const currentWeekNum = currentWeek ? currentWeek.id : 0;
-    const progressPercent = Math.round((currentWeekNum / totalWeeks) * 100);
+    const progressPercent = Math.min(Math.round((currentWeekNum / totalWeeks) * 100), 100);
 
     const displayName = user?.user_metadata?.full_name
         ? user.user_metadata.full_name + "님"
@@ -169,7 +169,7 @@ export default function DashboardPage() {
 
                 <div className="relative p-6 md:p-8">
                     <div className="flex flex-col md:flex-row justify-between items-center gap-6">
-                        <div className="flex flex-col gap-6 max-w-3xl">
+                        <div className="flex flex-col gap-6 flex-1 min-w-0">
                             <div>
                                 <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-blue-500/30 border border-blue-400/30 text-xs font-medium backdrop-blur-sm">
                                     <Sparkles className="w-3 h-3 text-blue-200" />
@@ -177,7 +177,7 @@ export default function DashboardPage() {
                                 </div>
                             </div>
 
-                            <h1 className="text-2xl md:text-3xl font-bold leading-tight">
+                            <h1 className="text-2xl md:text-3xl font-bold leading-tight break-keep">
                                 {loading ? (
                                     <span className="animate-pulse bg-white/20 rounded h-8 w-64 block"></span>
                                 ) : (

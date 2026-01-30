@@ -334,7 +334,8 @@ export default function MaterialsPage() {
         const matchesSearch = m.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
             (m.weeks?.title || "").toLowerCase().includes(searchTerm.toLowerCase());
         const matchesType = selectedType === "all" || m.type === selectedType;
-        return matchesSearch && matchesType;
+        const matchesVisibility = isInstructor || m.is_visible !== false; // Hide hidden items from students
+        return matchesSearch && matchesType && matchesVisibility;
     });
 
     const isInstructor = userRole === 'instructor';
