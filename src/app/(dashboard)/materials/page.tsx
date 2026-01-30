@@ -884,16 +884,33 @@ export default function MaterialsPage() {
                                 )}
 
                                 {/* Markdown Description */}
+                                {/* Markdown Description */}
                                 <div className="prose prose-blue max-w-none">
-                                    <div className="prose prose-blue max-w-none">
-                                        <ReactMarkdown
-                                            remarkPlugins={[remarkBreaks]}
-                                            rehypePlugins={[rehypeRaw]}
-                                            components={MarkdownComponents}
-                                        >
-                                            {viewingMaterial.description || "상세 설명이 없습니다."}
-                                        </ReactMarkdown>
-                                    </div>
+                                    {(() => {
+                                        const description = viewingMaterial.description || "상세 설명이 없습니다.";
+                                        // Check if content is HTML (from Quill) or Legacy Markdown
+                                        const isHtml = /<[a-z][\s\S]*>/i.test(description) || description.includes('<p>');
+
+                                        if (isHtml) {
+                                            return (
+                                                <div
+                                                    dangerouslySetInnerHTML={{
+                                                        __html: description.replace(/<a /g, '<a target="_blank" rel="noopener noreferrer" ')
+                                                    }}
+                                                />
+                                            );
+                                        }
+
+                                        return (
+                                            <ReactMarkdown
+                                                remarkPlugins={[remarkBreaks]}
+                                                rehypePlugins={[rehypeRaw]}
+                                                components={MarkdownComponents}
+                                            >
+                                                {description}
+                                            </ReactMarkdown>
+                                        );
+                                    })()}
                                 </div>
                             </div>
                         </div>
