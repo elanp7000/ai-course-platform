@@ -968,8 +968,8 @@ export default function MaterialsPage() {
                                         if (isHtml) {
                                             let processedHtml = description;
 
-                                            // 1. Ensure standard HTML links open in new tab
-                                            processedHtml = processedHtml.replace(/<a href/g, '<a target="_blank" rel="noopener noreferrer" href');
+                                            // 1. Ensure standard HTML links open in new tab and are styled
+                                            processedHtml = processedHtml.replace(/<a href/g, '<a class="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer" href');
 
                                             // 2. Convert Legacy Markdown Images (e.g. <p>![alt](url)</p>) to HTML
                                             processedHtml = processedHtml.replace(/!\[([^\]]*)\]\(([^)]*)\)/g,
@@ -983,6 +983,7 @@ export default function MaterialsPage() {
 
                                             return (
                                                 <div
+                                                    className="whitespace-pre-wrap"
                                                     dangerouslySetInnerHTML={{
                                                         __html: processedHtml
                                                     }}
