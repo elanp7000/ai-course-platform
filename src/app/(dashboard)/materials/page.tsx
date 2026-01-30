@@ -892,10 +892,25 @@ export default function MaterialsPage() {
                                         const isHtml = /<[a-z][\s\S]*>/i.test(description) || description.includes('<p>');
 
                                         if (isHtml) {
+                                            let processedHtml = description;
+
+                                            // 1. Ensure standard HTML links open in new tab
+                                            processedHtml = processedHtml.replace(/<a href/g, '<a target="_blank" rel="noopener noreferrer" href');
+
+                                            // 2. Convert Legacy Markdown Images (e.g. <p>![alt](url)</p>) to HTML
+                                            processedHtml = processedHtml.replace(/!\[([^\]]*)\]\(([^)]*)\)/g,
+                                                '<img src="$2" alt="$1" class="rounded-lg shadow-sm my-2" style="max-width: 100%; height: auto;" />'
+                                            );
+
+                                            // 3. Convert Legacy Markdown Links to HTML
+                                            processedHtml = processedHtml.replace(/\[([^\]]*)\]\(([^)]*)\)/g,
+                                                '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline">$1</a>'
+                                            );
+
                                             return (
                                                 <div
                                                     dangerouslySetInnerHTML={{
-                                                        __html: description.replace(/<a /g, '<a target="_blank" rel="noopener noreferrer" ')
+                                                        __html: processedHtml
                                                     }}
                                                 />
                                             );
