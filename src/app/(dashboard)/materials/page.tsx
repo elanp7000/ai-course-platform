@@ -1,11 +1,22 @@
+
 "use client";
 
-import { useEffect, useState, useRef } from "react";
-import { Folder, FileText, Download, Search, Plus, X, PlayCircle, Image as ImageIcon, FileCode, BookOpen, Link as LinkIcon, Trash2, Edit2, CheckCircle, Bot, Globe, Bold, Type, Palette, ArrowUp, ArrowDown } from "lucide-react";
+import { useState, useEffect, useRef, useMemo } from 'react';
+import dynamic from 'next/dynamic';
+import {
+    Loader2, Upload, FileText, Link as LinkIcon, Image as ImageIcon,
+    Video, FileCode, Plus, MoreVertical, X, Pencil, Trash2,
+    Eye, EyeOff, GripVertical, Check, PlayCircle, Bold, Type,
+    Folder, Download, Search, BookOpen, Edit2, CheckCircle, Bot, Globe, Palette, ArrowUp, ArrowDown
+} from 'lucide-react';
 import { supabase } from "@/utils/supabase/client";
-import ReactMarkdown from "react-markdown";
-import remarkBreaks from "remark-breaks";
-import rehypeRaw from "rehype-raw";
+import ReactMarkdown from 'react-markdown';
+import remarkBreaks from 'remark-breaks';
+import rehypeRaw from 'rehype-raw';
+import 'react-quill/dist/quill.snow.css';
+
+// Dynamic import for ReactQuill to avoid SSR issues
+const ReactQuill = dynamic(() => import('react-quill'), { ssr: false });
 
 type Material = {
     id: string;
@@ -48,6 +59,7 @@ export default function MaterialsPage() {
     const videoInputRef = useRef<HTMLInputElement>(null);
     const htmlInputRef = useRef<HTMLInputElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null); // For main content file
+    const quillRef = useRef<any>(null); // For rich text editor
 
     // Form State
     const [formData, setFormData] = useState({
@@ -55,11 +67,11 @@ export default function MaterialsPage() {
         title: "",
         type: "link" as Material['type'],
         content_url: "",
-        description: "", // Now supports Markdown
+        description: "", // Now supports HTML from Quill
         is_visible: true
     });
     const [file, setFile] = useState<File | null>(null);
-    const [activeTab, setActiveTab] = useState<'write' | 'preview'>('write');
+    // activeTab removed as using WYSIWYG editor
 
     useEffect(() => {
         fetchData();
@@ -89,12 +101,12 @@ export default function MaterialsPage() {
         const { data: materialsData, error } = await supabase
             .from('materials')
             .select(`
-                *,
-                weeks (
-                    title,
-                    week_number
-                )
-            `)
+    *,
+    weeks(
+        title,
+        week_number
+    )
+        `)
             .order('sort_order', { ascending: true })
             .order('created_at', { ascending: false });
 
@@ -107,8 +119,8 @@ export default function MaterialsPage() {
 
     const uploadFile = async (file: File) => {
         const fileExt = file.name.split('.').pop();
-        const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
-        const filePath = `${fileName}`;
+        const fileName = `${Date.now()} -${Math.random().toString(36).substring(2)}.${fileExt} `;
+        const filePath = `${fileName} `;
 
         const { error: uploadError } = await supabase.storage
             .from('lecture_materials')
@@ -123,32 +135,80 @@ export default function MaterialsPage() {
         return publicUrl;
     };
 
-    // New: Handle Description Uploads (Images/Videos/HTML within description)
-    const handleDescriptionUpload = async (event: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'video' | 'html') => {
-        const file = event.target.files?.[0];
+    // Custom Image Handler for Quill
+    const imageHandler = () => {
+        imageInputRef.current?.click();
+    };
+
+    const modules = useMemo(() => ({
+        toolbar: {
+            container: [
+                [{ 'header': [1, 2, 3, false] }],
+                ['bold', 'italic', 'underline', 'strike'],
+                [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+                [{ 'color': [] }, { 'background': [] }],
+                ['link', 'image'],
+                ['clean']
+            ],
+            handlers: {
+                image: imageHandler
+            }
+        }
+    }), []);
+
+    const handleDescriptionUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'video' | 'html') => {
+        const file = e.target.files?.[0];
         if (!file) return;
 
-        setIsUploading(true);
         try {
-            const url = await uploadFile(file);
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+            const filePath = `${fileName}`;
 
-            const markdown = type === 'image'
-                ? `\n![${file.name}](${url})\n`
-                : type === 'video'
-                    ? `\n[동영상 보기](${url})\n`
-                    : `\n[HTML 파일 보기](${url})\n`;
+            const { error: uploadError } = await supabase.storage
+                .from('lecture_materials')
+                .upload(filePath, file);
 
-            setFormData(prev => ({
-                ...prev,
-                description: prev.description + markdown
-            }));
-            setActiveTab('preview'); // Switch to preview to show the image
+            if (uploadError) throw uploadError;
+
+            const { data: { publicUrl } } = supabase.storage
+                .from('lecture_materials')
+                .getPublicUrl(filePath);
+
+            // Insert into Quill
+            if (quillRef.current) {
+                // Determine if the ref is the component or the editor instance directly
+                // ReactQuill ref usually exposes getEditor()
+                const editor = quillRef.current.getEditor ? quillRef.current.getEditor() : quillRef.current;
+
+                // Ensure we have an editor instance
+                if (editor && editor.getSelection) {
+                    const range = editor.getSelection();
+                    const index = range ? range.index : editor.getLength();
+
+                    if (type === 'image') {
+                        editor.insertEmbed(index, 'image', publicUrl);
+                    } else {
+                        editor.insertText(index, `[${type.toUpperCase()}: ${file.name}]`, 'link', publicUrl);
+                    }
+                    // Move cursor to next line
+                    editor.setSelection(index + 1);
+                }
+            } else {
+                // Fallback if Quill ref is not ready (should not happen in edit mode)
+                setFormData(prev => ({
+                    ...prev,
+                    description: prev.description + (type === 'image' ? `\n![${file.name}](${publicUrl})` : `\n[${file.name}](${publicUrl})`)
+                }));
+            }
+
         } catch (error: any) {
             console.error('Upload failed:', error);
             alert('업로드 실패: ' + error.message);
         } finally {
-            setIsUploading(false);
-            if (event.target) event.target.value = '';
+            if (imageInputRef.current) imageInputRef.current.value = '';
+            if (videoInputRef.current) videoInputRef.current.value = '';
+            if (htmlInputRef.current) htmlInputRef.current.value = '';
         }
     };
 
@@ -184,7 +244,7 @@ export default function MaterialsPage() {
         const url = prompt("링크 주소(URL)를 입력해주세요:");
         if (!url) return;
         const text = prompt("링크 텍스트를 입력해주세요 (선택사항):") || "링크";
-        const markdown = `\n[${text}](${url})\n`;
+        const markdown = `\n[${text}](${url}) \n`;
         setFormData(prev => ({
             ...prev,
             description: prev.description + markdown
@@ -328,7 +388,7 @@ export default function MaterialsPage() {
         setEditingMaterial(null);
         setFormData({ week_id: "", title: "", type: "link", content_url: "", description: "", is_visible: true });
         setFile(null);
-        setActiveTab('write');
+
     };
 
     // Filter Logic
@@ -410,17 +470,17 @@ export default function MaterialsPage() {
                         </div>
                         <div className="flex gap-2 overflow-x-auto pb-2 md:pb-0 w-full md:w-auto custom-scrollbar">
                             <style jsx>{`
-                                .custom-scrollbar::-webkit-scrollbar {
-                                    height: 4px;
-                                }
-                                .custom-scrollbar::-webkit-scrollbar-track {
-                                    background: transparent;
-                                }
-                                .custom-scrollbar::-webkit-scrollbar-thumb {
-                                    background-color: #e5e7eb;
-                                    border-radius: 20px;
-                                }
-                            `}</style>
+    .custom - scrollbar:: -webkit - scrollbar {
+    height: 4px;
+}
+                                .custom - scrollbar:: -webkit - scrollbar - track {
+    background: transparent;
+}
+                                .custom - scrollbar:: -webkit - scrollbar - thumb {
+    background - color: #e5e7eb;
+    border - radius: 20px;
+}
+`}</style>
                             {[
                                 { id: 'all', label: '전체' },
                                 { id: 'video', label: 'Video' },
@@ -433,8 +493,8 @@ export default function MaterialsPage() {
                                 <button
                                     key={type.id}
                                     onClick={() => setSelectedType(type.id)}
-                                    className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${selectedType === type.id ? 'bg-blue-100 text-blue-700' : 'bg-white border text-gray-600 hover:bg-gray-50'
-                                        }`}
+                                    className={`px - 3 py - 1.5 rounded - lg text - sm font - medium whitespace - nowrap transition - colors ${selectedType === type.id ? 'bg-blue-100 text-blue-700' : 'bg-white border text-gray-600 hover:bg-gray-50'
+                                        } `}
                                 >
                                     {type.label}
                                 </button>
@@ -447,17 +507,17 @@ export default function MaterialsPage() {
             {/* List - Scrollable */}
             <div className="flex-1 overflow-y-auto px-4 md:px-8 pb-8 custom-scrollbar">
                 <style jsx>{`
-                    .custom-scrollbar::-webkit-scrollbar {
-                        width: 6px;
-                    }
-                    .custom-scrollbar::-webkit-scrollbar-track {
-                        background: transparent;
-                    }
-                    .custom-scrollbar::-webkit-scrollbar-thumb {
-                        background-color: #e5e7eb;
-                        border-radius: 20px;
-                    }
-                `}</style>
+    .custom - scrollbar:: -webkit - scrollbar {
+    width: 6px;
+}
+                    .custom - scrollbar:: -webkit - scrollbar - track {
+    background: transparent;
+}
+                    .custom - scrollbar:: -webkit - scrollbar - thumb {
+    background - color: #e5e7eb;
+    border - radius: 20px;
+}
+`}</style>
                 <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden divide-y divide-gray-100">
                     {loading ? (
                         <div className="p-12 text-center text-gray-400">로딩 중...</div>
@@ -477,16 +537,16 @@ export default function MaterialsPage() {
                             return (
                                 <div
                                     key={material.id}
-                                    className={`p-4 hover:bg-gray-50 transition-colors flex items-center justify-between group cursor-pointer ${!material.is_visible ? 'bg-gray-50 opacity-75' : ''}`}
+                                    className={`p - 4 hover: bg - gray - 50 transition - colors flex items - center justify - between group cursor - pointer ${!material.is_visible ? 'bg-gray-50 opacity-75' : ''} `}
                                     onClick={() => setViewingMaterial(material)}
                                 >
                                     <div className="flex items-center gap-4 flex-1 min-w-0">
-                                        <div className={`p-3 rounded-lg shrink-0 ${material.type === 'pdf' ? 'bg-red-50 text-red-600' :
+                                        <div className={`p - 3 rounded - lg shrink - 0 ${material.type === 'pdf' ? 'bg-red-50 text-red-600' :
                                             material.type === 'video' ? 'bg-purple-50 text-purple-600' :
                                                 material.type === 'image' ? 'bg-green-50 text-green-600' :
                                                     material.type === 'ai_tool' ? 'bg-indigo-50 text-indigo-600' :
                                                         'bg-blue-50 text-blue-600'
-                                            }`}>
+                                            } `}>
                                             <Icon className="w-6 h-6" />
                                         </div>
                                         <div className="min-w-0">
@@ -521,7 +581,7 @@ export default function MaterialsPage() {
                                         )}
                                         {isInstructor && (
                                             <>
-                                                <div className={`flex flex-col gap-1 mr-2 ${isFiltering ? 'opacity-30 cursor-not-allowed' : ''}`}>
+                                                <div className={`flex flex - col gap - 1 mr - 2 ${isFiltering ? 'opacity-30 cursor-not-allowed' : ''} `}>
                                                     <button
                                                         onClick={(e) => !isFiltering && handleMoveMaterial(material.id, 'up', e)}
                                                         className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
@@ -582,7 +642,7 @@ export default function MaterialsPage() {
                                                 <option value="">주차를 선택하세요</option>
                                                 {weeks.map(week => (
                                                     <option key={week.id} value={week.id}>
-                                                        {week.week_number === 0 ? "[공통] 공통 학습 자료" : `${week.week_number}주차 - ${week.title}`}
+                                                        {week.week_number === 0 ? "[공통] 공통 학습 자료" : `${week.week_number} 주차 - ${week.title} `}
                                                     </option>
                                                 ))}
                                             </select>
@@ -617,10 +677,10 @@ export default function MaterialsPage() {
                                                     key={type.id}
                                                     type="button"
                                                     onClick={() => setFormData({ ...formData, type: type.id as any })}
-                                                    className={`flex flex-col items-center justify-center p-3 rounded-xl border transition-all ${formData.type === type.id
+                                                    className={`flex flex - col items - center justify - center p - 3 rounded - xl border transition - all ${formData.type === type.id
                                                         ? 'bg-blue-600 text-white border-blue-600 ring-2 ring-blue-200 ring-offset-1'
                                                         : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50 hover:border-gray-300'
-                                                        }`}
+                                                        } `}
                                                 >
                                                     <type.icon className="w-5 h-5 mb-1" />
                                                     <span className="text-[10px] sm:text-xs font-medium whitespace-nowrap">{type.label}</span>
@@ -666,139 +726,43 @@ export default function MaterialsPage() {
                                         <p className="text-xs text-gray-400 mt-1">※ 목록에서 바로 접근할 수 있는 대표 콘텐츠입니다.</p>
                                     </div>
 
-                                    {/* Rich Description */}
+                                    {/* Rich Description - ReactQuill */}
                                     <div>
-                                        <div className="flex items-center justify-between mb-2">
-                                            <label className="block text-sm font-bold text-gray-700">상세 설명</label>
-                                            <div className="flex bg-gray-100 p-1 rounded-lg">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setActiveTab('write')}
-                                                    className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${activeTab === 'write' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-                                                >
-                                                    작성하기
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setActiveTab('preview')}
-                                                    className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${activeTab === 'preview' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-                                                >
-                                                    미리보기
-                                                </button>
-                                            </div>
+                                        <label className="block text-sm font-bold text-gray-700 mb-2">상세 설명</label>
+                                        <div className="bg-white rounded-xl overflow-hidden" style={{ minHeight: '300px' }}>
+                                            <ReactQuill
+                                                ref={quillRef}
+                                                theme="snow"
+                                                value={formData.description}
+                                                onChange={(value) => setFormData({ ...formData, description: value })}
+                                                modules={modules}
+                                                className="h-64 mb-12"
+                                                placeholder="자료에 대한 상세 설명을 입력하세요."
+                                            />
                                         </div>
-
-                                        <div className="border rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-blue-500 min-h-[14rem]">
-                                            {activeTab === 'write' ? (
-                                                <>
-                                                    <textarea
-                                                        value={formData.description}
-                                                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                                        className="w-full p-4 border-none outline-none h-48 resize-none text-base"
-                                                        placeholder="자료에 대한 상세 설명을 입력하세요. 아래 버튼을 사용하여 이미지, 동영상, 링크를 추가할 수 있습니다."
-                                                    />
-                                                    <div className="bg-gray-50 p-2 flex gap-2 border-t flex-wrap items-center">
-                                                        {/* Formatting Tools */}
-                                                        <div className="flex items-center gap-1 pr-3 border-r border-gray-200 mr-1">
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => insertText('**', '**')}
-                                                                className="p-2 text-gray-500 hover:text-gray-900 hover:bg-white rounded-lg transition-colors"
-                                                                title="굵게"
-                                                            >
-                                                                <Bold className="w-4 h-4" />
-                                                            </button>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => insertText('<span style=\u0022font-size: 1.5em; font-weight: bold;\u0022>', '</span>')}
-                                                                className="p-2 text-gray-500 hover:text-gray-900 hover:bg-white rounded-lg transition-colors"
-                                                                title="제목 (크게)"
-                                                            >
-                                                                <Type className="w-4 h-4" />
-                                                            </button>
-                                                            <div className="flex items-center gap-1 ml-1">
-                                                                <button type="button" onClick={() => insertText('<span style=\u0022color: #ef4444;\u0022>', '</span>')} className="w-5 h-5 rounded-full bg-red-500 hover:ring-2 ring-offset-1 ring-red-300" title="빨강"></button>
-                                                                <button type="button" onClick={() => insertText('<span style=\u0022color: #3b82f6;\u0022>', '</span>')} className="w-5 h-5 rounded-full bg-blue-500 hover:ring-2 ring-offset-1 ring-blue-300" title="파랑"></button>
-                                                                <button type="button" onClick={() => insertText('<span style=\u0022color: #22c55e;\u0022>', '</span>')} className="w-5 h-5 rounded-full bg-green-500 hover:ring-2 ring-offset-1 ring-green-300" title="초록"></button>
-                                                            </div>
-                                                        </div>
-
-                                                        {/* Media Tools */}
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => imageInputRef.current?.click()}
-                                                            className="p-2 text-gray-500 hover:text-blue-600 hover:bg-white rounded-lg transition-colors"
-                                                            title="이미지 추가"
-                                                        >
-                                                            <ImageIcon className="w-5 h-5" />
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => videoInputRef.current?.click()}
-                                                            className="p-2 text-gray-500 hover:text-purple-600 hover:bg-white rounded-lg transition-colors"
-                                                            title="동영상 추가"
-                                                        >
-                                                            <PlayCircle className="w-5 h-5" />
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            onClick={handleLinkInsert}
-                                                            className="p-2 text-gray-500 hover:text-green-600 hover:bg-white rounded-lg transition-colors"
-                                                            title="링크 추가"
-                                                        >
-                                                            <LinkIcon className="w-5 h-5" />
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => htmlInputRef.current?.click()}
-                                                            className="p-2 text-gray-500 hover:text-orange-600 hover:bg-white rounded-lg transition-colors"
-                                                            title="HTML 파일 추가"
-                                                        >
-                                                            <FileCode className="w-5 h-5" />
-                                                        </button>
-
-                                                        {/* Hidden Inputs */}
-                                                        <input type="file" ref={imageInputRef} className="hidden" accept="image/*" onChange={(e) => handleDescriptionUpload(e, 'image')} />
-                                                        <input type="file" ref={videoInputRef} className="hidden" accept="video/*" onChange={(e) => handleDescriptionUpload(e, 'video')} />
-                                                        <input type="file" ref={htmlInputRef} className="hidden" accept=".html,text/html" onChange={(e) => handleDescriptionUpload(e, 'html')} />
-                                                    </div>
-                                                </>
-                                            ) : (
-                                                <div className="w-full p-4 h-64 overflow-y-auto prose prose-sm max-w-none bg-gray-50/50">
-                                                    {formData.description ? (
-                                                        <ReactMarkdown
-                                                            remarkPlugins={[remarkBreaks]}
-                                                            rehypePlugins={[rehypeRaw]}
-                                                            components={MarkdownComponents}
-                                                        >
-                                                            {formData.description}
-                                                        </ReactMarkdown>
-                                                    ) : (
-                                                        <p className="text-gray-400 text-center py-10">입력된 내용이 없습니다.</p>
-                                                    )}
-                                                </div>
-                                            )}
-                                        </div>
-                                        <p className="text-xs text-gray-400 mt-2 text-right">
-                                            {activeTab === 'write' ? '※ 이미지를 추가하면 코드로 입력되며, [미리보기] 탭에서 실제 이미지를 확인할 수 있습니다.' : '※ 미리보기 모드입니다. 수정하려면 [작성하기] 탭을 클릭하세요.'}
-                                        </p>
+                                        <p className="text-xs text-gray-400 mt-2">※ 이미지를 드래그하거나 도구 모음의 이미지 버튼을 사용하여 추가할 수 있습니다.</p>
                                     </div>
+
+                                    {/* Hidden Inputs for Custom Handler */}
+                                    <input type="file" ref={imageInputRef} className="hidden" accept="image/*" onChange={(e) => handleDescriptionUpload(e, 'image')} />
+                                    <input type="file" ref={videoInputRef} className="hidden" accept="video/*" onChange={(e) => handleDescriptionUpload(e, 'video')} />
+                                    <input type="file" ref={htmlInputRef} className="hidden" accept=".html,text/html" onChange={(e) => handleDescriptionUpload(e, 'html')} />
                                     {/* Visibility Toggle */}
                                     <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border">
-                                        <span className={`text-sm font-medium ${formData.is_visible ? "text-blue-600" : "text-gray-500"}`}>
+                                        <span className={`text - sm font - medium ${formData.is_visible ? "text-blue-600" : "text-gray-500"} `}>
                                             {formData.is_visible ? "학생들에게 공개됨" : "학생들에게 숨김 (비공개)"}
                                         </span>
                                         <div className="flex-1" />
                                         <button
                                             type="button"
                                             onClick={() => setFormData({ ...formData, is_visible: !formData.is_visible })}
-                                            className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${formData.is_visible ? 'bg-blue-600' : 'bg-gray-200'
-                                                }`}
+                                            className={`relative inline - flex h - 6 w - 11 flex - shrink - 0 cursor - pointer rounded - full border - 2 border - transparent transition - colors duration - 200 ease -in -out focus: outline - none ${formData.is_visible ? 'bg-blue-600' : 'bg-gray-200'
+                                                } `}
                                         >
                                             <span
                                                 aria-hidden="true"
-                                                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${formData.is_visible ? 'translate-x-5' : 'translate-x-0'
-                                                    }`}
+                                                className={`pointer - events - none inline - block h - 5 w - 5 transform rounded - full bg - white shadow ring - 0 transition duration - 200 ease -in -out ${formData.is_visible ? 'translate-x-5' : 'translate-x-0'
+                                                    } `}
                                             />
                                         </button>
                                     </div>
@@ -839,7 +803,7 @@ export default function MaterialsPage() {
                                 <div>
                                     <div className="flex items-center gap-2 mb-2">
                                         <span className="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
-                                            {viewingMaterial.weeks?.week_number === 0 ? "공통" : `Week ${viewingMaterial.weeks?.week_number || "?"}`}
+                                            {viewingMaterial.weeks?.week_number === 0 ? "공통" : `Week ${viewingMaterial.weeks?.week_number || "?"} `}
                                         </span>
                                         {viewingMaterial.type === 'ai_tool' && (
                                             <span className="text-xs font-bold text-indigo-600 bg-indigo-100 px-2 py-0.5 rounded">AI 도구</span>
@@ -881,13 +845,10 @@ export default function MaterialsPage() {
 
                                 {/* Markdown Description */}
                                 <div className="prose prose-blue max-w-none">
-                                    <ReactMarkdown
-                                        remarkPlugins={[remarkBreaks]}
-                                        rehypePlugins={[rehypeRaw]}
-                                        components={MarkdownComponents}
-                                    >
-                                        {viewingMaterial.description || "상세 설명이 없습니다."}
-                                    </ReactMarkdown>
+                                    <div className="prose prose-blue max-w-none">
+                                        {/* Use dangerouslySetInnerHTML to render HTML from Quill */}
+                                        <div dangerouslySetInnerHTML={{ __html: viewingMaterial.description || "상세 설명이 없습니다." }} />
+                                    </div>
                                 </div>
                             </div>
                         </div>
