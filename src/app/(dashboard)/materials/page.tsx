@@ -981,9 +981,13 @@ export default function MaterialsPage() {
                                                 '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline">$1</a>'
                                             );
 
+                                            // 4. Force newlines to breaks (Safety net for mixed content)
+                                            processedHtml = processedHtml.replace(/\n/g, '<br />');
+
                                             return (
                                                 <div
-                                                    className="whitespace-pre-wrap"
+                                                    className="whitespace-pre-wrap break-words"
+                                                    style={{ whiteSpace: 'pre-wrap' }}
                                                     dangerouslySetInnerHTML={{
                                                         __html: processedHtml
                                                     }}
