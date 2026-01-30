@@ -791,20 +791,18 @@ export default function MaterialsPage() {
                                     <input type="file" ref={htmlInputRef} className="hidden" accept=".html,text/html" onChange={(e) => handleDescriptionUpload(e, 'html')} />
                                     {/* Visibility Toggle */}
                                     <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border">
-                                        <span className={`text - sm font - medium ${formData.is_visible ? "text-blue-600" : "text-gray-500"} `}>
+                                        <span className={`text-sm font-medium ${formData.is_visible ? "text-blue-600" : "text-gray-500"} `}>
                                             {formData.is_visible ? "학생들에게 공개됨" : "학생들에게 숨김 (비공개)"}
                                         </span>
                                         <div className="flex-1" />
                                         <button
                                             type="button"
                                             onClick={() => setFormData({ ...formData, is_visible: !formData.is_visible })}
-                                            className={`relative inline - flex h - 6 w - 11 flex - shrink - 0 cursor - pointer rounded - full border - 2 border - transparent transition - colors duration - 200 ease -in -out focus: outline - none ${formData.is_visible ? 'bg-blue-600' : 'bg-gray-200'
-                                                } `}
+                                            className={`relative w-12 h-7 transition-colors duration-200 ease-in-out rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 border-2 border-transparent ${formData.is_visible ? 'bg-blue-600' : 'bg-gray-200'}`}
                                         >
                                             <span
                                                 aria-hidden="true"
-                                                className={`pointer - events - none inline - block h - 5 w - 5 transform rounded - full bg - white shadow ring - 0 transition duration - 200 ease -in -out ${formData.is_visible ? 'translate-x-5' : 'translate-x-0'
-                                                    } `}
+                                                className={`inline-block w-5 h-5 bg-white rounded-full shadow transform ring-0 transition duration-200 ease-in-out pointer-events-none ${formData.is_visible ? 'translate-x-5' : 'translate-x-0'}`}
                                             />
                                         </button>
                                     </div>
