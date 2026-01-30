@@ -585,34 +585,38 @@ export default function MaterialsPage() {
                                                 {material.title}
                                             </h3>
                                             <div className="text-sm text-gray-400 h-5 overflow-hidden flex items-center gap-1">
-                                                {(() => {
-                                                    let text = material.description || "";
-                                                    // Normalize HTML/Markdown to Markers
-                                                    if (text.includes('<')) {
-                                                        text = text.replace(/<img[^>]*>/g, '___IMG___');
-                                                        text = text.replace(/<a[^>]*>.*?<\/a>/g, '___LINK___');
-                                                        text = text.replace(/<[^>]+>/g, ''); // Strip remaining tags
-                                                        text = text.replace(/&nbsp;/g, ' '); // Fix: Replace &nbsp; with space
-                                                    }
+                                                {material.summary ? (
+                                                    <p className="truncate w-full">{material.summary}</p>
+                                                ) : (
+                                                    (() => {
+                                                        let text = material.description || "";
+                                                        // Normalize HTML/Markdown to Markers
+                                                        if (text.includes('<')) {
+                                                            text = text.replace(/<img[^>]*>/g, '___IMG___');
+                                                            text = text.replace(/<a[^>]*>.*?<\/a>/g, '___LINK___');
+                                                            text = text.replace(/<[^>]+>/g, ''); // Strip remaining tags
+                                                            text = text.replace(/&nbsp;/g, ' '); // Fix: Replace &nbsp; with space
+                                                        }
 
-                                                    // Process Markdown (always run this to catch Markdown inside HTML or plain Markdown)
-                                                    text = text.replace(/!\[.*?\]\(.*?\)/g, '___IMG___');
-                                                    text = text.replace(/\[.*?\]\(.*?\)/g, '___LINK___');
-                                                    text = text.replace(/(\*\*|__)(.*?)\1/g, '$2').replace(/(#+)(.*)/g, '$2');
+                                                        // Process Markdown (always run this to catch Markdown inside HTML or plain Markdown)
+                                                        text = text.replace(/!\[.*?\]\(.*?\)/g, '___IMG___');
+                                                        text = text.replace(/\[.*?\]\(.*?\)/g, '___LINK___');
+                                                        text = text.replace(/(\*\*|__)(.*?)\1/g, '$2').replace(/(#+)(.*)/g, '$2');
 
-                                                    if (!text && material.content_url) return <span className="truncate">{material.content_url}</span>;
+                                                        if (!text && material.content_url) return <span className="truncate">{material.content_url}</span>;
 
-                                                    const parts = text.split(/(___IMG___|___LINK___)/g);
-                                                    return (
-                                                        <div className="truncate w-full flex items-center gap-1">
-                                                            {parts.map((part, i) => {
-                                                                if (part === '___IMG___') return <span key={i} className="inline-flex items-center gap-0.5 bg-gray-100 px-1.5 rounded text-[11px] text-gray-500 align-middle shrink-0"><ImageIcon className="w-3 h-3" />이미지</span>;
-                                                                if (part === '___LINK___') return <span key={i} className="inline-flex items-center gap-0.5 bg-gray-100 px-1.5 rounded text-[11px] text-gray-500 align-middle shrink-0"><LinkIcon className="w-3 h-3" />링크</span>;
-                                                                return <span key={i}>{part}</span>;
-                                                            })}
-                                                        </div>
-                                                    );
-                                                })()}
+                                                        const parts = text.split(/(___IMG___|___LINK___)/g);
+                                                        return (
+                                                            <div className="truncate w-full flex items-center gap-1">
+                                                                {parts.map((part, i) => {
+                                                                    if (part === '___IMG___') return <span key={i} className="inline-flex items-center gap-0.5 bg-gray-100 px-1.5 rounded text-[11px] text-gray-500 align-middle shrink-0"><ImageIcon className="w-3 h-3" />이미지</span>;
+                                                                    if (part === '___LINK___') return <span key={i} className="inline-flex items-center gap-0.5 bg-gray-100 px-1.5 rounded text-[11px] text-gray-500 align-middle shrink-0"><LinkIcon className="w-3 h-3" />링크</span>;
+                                                                    return <span key={i}>{part}</span>;
+                                                                })}
+                                                            </div>
+                                                        );
+                                                    })()
+                                                )}
                                             </div>
                                         </div>
                                     </div>
