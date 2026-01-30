@@ -59,6 +59,7 @@ export default function MaterialsPage() {
         is_visible: true
     });
     const [file, setFile] = useState<File | null>(null);
+    const [activeTab, setActiveTab] = useState<'write' | 'preview'>('write');
 
     useEffect(() => {
         fetchData();
@@ -141,6 +142,7 @@ export default function MaterialsPage() {
                 ...prev,
                 description: prev.description + markdown
             }));
+            setActiveTab('preview'); // Switch to preview to show the image
         } catch (error: any) {
             console.error('Upload failed:', error);
             alert('업로드 실패: ' + error.message);
@@ -326,6 +328,7 @@ export default function MaterialsPage() {
         setEditingMaterial(null);
         setFormData({ week_id: "", title: "", type: "link", content_url: "", description: "", is_visible: true });
         setFile(null);
+        setActiveTab('write');
     };
 
     // Filter Logic
@@ -665,80 +668,120 @@ export default function MaterialsPage() {
 
                                     {/* Rich Description */}
                                     <div>
-                                        <label className="block text-sm font-bold text-gray-700 mb-2">상세 설명</label>
-                                        <div className="border rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-blue-500">
-                                            <textarea
-                                                value={formData.description}
-                                                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                                className="w-full p-4 border-none outline-none h-48 resize-none text-base"
-                                                placeholder="자료에 대한 상세 설명을 입력하세요. 아래 버튼을 사용하여 이미지, 동영상, 링크를 추가할 수 있습니다."
-                                            />
-                                            <div className="bg-gray-50 p-2 flex gap-2 border-t flex-wrap items-center">
-                                                {/* Formatting Tools */}
-                                                <div className="flex items-center gap-1 pr-3 border-r border-gray-200 mr-1">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => insertText('**', '**')}
-                                                        className="p-2 text-gray-500 hover:text-gray-900 hover:bg-white rounded-lg transition-colors"
-                                                        title="굵게"
-                                                    >
-                                                        <Bold className="w-4 h-4" />
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => insertText('<span style="font-size: 1.5em; font-weight: bold;">', '</span>')}
-                                                        className="p-2 text-gray-500 hover:text-gray-900 hover:bg-white rounded-lg transition-colors"
-                                                        title="제목 (크게)"
-                                                    >
-                                                        <Type className="w-4 h-4" />
-                                                    </button>
-                                                    <div className="flex items-center gap-1 ml-1">
-                                                        <button type="button" onClick={() => insertText('<span style="color: #ef4444;">', '</span>')} className="w-5 h-5 rounded-full bg-red-500 hover:ring-2 ring-offset-1 ring-red-300" title="빨강"></button>
-                                                        <button type="button" onClick={() => insertText('<span style="color: #3b82f6;">', '</span>')} className="w-5 h-5 rounded-full bg-blue-500 hover:ring-2 ring-offset-1 ring-blue-300" title="파랑"></button>
-                                                        <button type="button" onClick={() => insertText('<span style="color: #22c55e;">', '</span>')} className="w-5 h-5 rounded-full bg-green-500 hover:ring-2 ring-offset-1 ring-green-300" title="초록"></button>
-                                                    </div>
-                                                </div>
-
-                                                {/* Media Tools */}
+                                        <div className="flex items-center justify-between mb-2">
+                                            <label className="block text-sm font-bold text-gray-700">상세 설명</label>
+                                            <div className="flex bg-gray-100 p-1 rounded-lg">
                                                 <button
                                                     type="button"
-                                                    onClick={() => imageInputRef.current?.click()}
-                                                    className="p-2 text-gray-500 hover:text-blue-600 hover:bg-white rounded-lg transition-colors"
-                                                    title="이미지 추가"
+                                                    onClick={() => setActiveTab('write')}
+                                                    className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${activeTab === 'write' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
                                                 >
-                                                    <ImageIcon className="w-5 h-5" />
+                                                    작성하기
                                                 </button>
                                                 <button
                                                     type="button"
-                                                    onClick={() => videoInputRef.current?.click()}
-                                                    className="p-2 text-gray-500 hover:text-purple-600 hover:bg-white rounded-lg transition-colors"
-                                                    title="동영상 추가"
+                                                    onClick={() => setActiveTab('preview')}
+                                                    className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${activeTab === 'preview' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
                                                 >
-                                                    <PlayCircle className="w-5 h-5" />
+                                                    미리보기
                                                 </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={handleLinkInsert}
-                                                    className="p-2 text-gray-500 hover:text-green-600 hover:bg-white rounded-lg transition-colors"
-                                                    title="링크 추가"
-                                                >
-                                                    <LinkIcon className="w-5 h-5" />
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => htmlInputRef.current?.click()}
-                                                    className="p-2 text-gray-500 hover:text-orange-600 hover:bg-white rounded-lg transition-colors"
-                                                    title="HTML 파일 추가"
-                                                >
-                                                    <FileCode className="w-5 h-5" />
-                                                </button>
-
-                                                {/* Hidden Inputs */}
-                                                <input type="file" ref={imageInputRef} className="hidden" accept="image/*" onChange={(e) => handleDescriptionUpload(e, 'image')} />
-                                                <input type="file" ref={videoInputRef} className="hidden" accept="video/*" onChange={(e) => handleDescriptionUpload(e, 'video')} />
-                                                <input type="file" ref={htmlInputRef} className="hidden" accept=".html,text/html" onChange={(e) => handleDescriptionUpload(e, 'html')} />
                                             </div>
                                         </div>
+
+                                        <div className="border rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-blue-500 min-h-[14rem]">
+                                            {activeTab === 'write' ? (
+                                                <>
+                                                    <textarea
+                                                        value={formData.description}
+                                                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                                                        className="w-full p-4 border-none outline-none h-48 resize-none text-base"
+                                                        placeholder="자료에 대한 상세 설명을 입력하세요. 아래 버튼을 사용하여 이미지, 동영상, 링크를 추가할 수 있습니다."
+                                                    />
+                                                    <div className="bg-gray-50 p-2 flex gap-2 border-t flex-wrap items-center">
+                                                        {/* Formatting Tools */}
+                                                        <div className="flex items-center gap-1 pr-3 border-r border-gray-200 mr-1">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => insertText('**', '**')}
+                                                                className="p-2 text-gray-500 hover:text-gray-900 hover:bg-white rounded-lg transition-colors"
+                                                                title="굵게"
+                                                            >
+                                                                <Bold className="w-4 h-4" />
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => insertText('<span style=\u0022font-size: 1.5em; font-weight: bold;\u0022>', '</span>')}
+                                                                className="p-2 text-gray-500 hover:text-gray-900 hover:bg-white rounded-lg transition-colors"
+                                                                title="제목 (크게)"
+                                                            >
+                                                                <Type className="w-4 h-4" />
+                                                            </button>
+                                                            <div className="flex items-center gap-1 ml-1">
+                                                                <button type="button" onClick={() => insertText('<span style=\u0022color: #ef4444;\u0022>', '</span>')} className="w-5 h-5 rounded-full bg-red-500 hover:ring-2 ring-offset-1 ring-red-300" title="빨강"></button>
+                                                                <button type="button" onClick={() => insertText('<span style=\u0022color: #3b82f6;\u0022>', '</span>')} className="w-5 h-5 rounded-full bg-blue-500 hover:ring-2 ring-offset-1 ring-blue-300" title="파랑"></button>
+                                                                <button type="button" onClick={() => insertText('<span style=\u0022color: #22c55e;\u0022>', '</span>')} className="w-5 h-5 rounded-full bg-green-500 hover:ring-2 ring-offset-1 ring-green-300" title="초록"></button>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Media Tools */}
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => imageInputRef.current?.click()}
+                                                            className="p-2 text-gray-500 hover:text-blue-600 hover:bg-white rounded-lg transition-colors"
+                                                            title="이미지 추가"
+                                                        >
+                                                            <ImageIcon className="w-5 h-5" />
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => videoInputRef.current?.click()}
+                                                            className="p-2 text-gray-500 hover:text-purple-600 hover:bg-white rounded-lg transition-colors"
+                                                            title="동영상 추가"
+                                                        >
+                                                            <PlayCircle className="w-5 h-5" />
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={handleLinkInsert}
+                                                            className="p-2 text-gray-500 hover:text-green-600 hover:bg-white rounded-lg transition-colors"
+                                                            title="링크 추가"
+                                                        >
+                                                            <LinkIcon className="w-5 h-5" />
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => htmlInputRef.current?.click()}
+                                                            className="p-2 text-gray-500 hover:text-orange-600 hover:bg-white rounded-lg transition-colors"
+                                                            title="HTML 파일 추가"
+                                                        >
+                                                            <FileCode className="w-5 h-5" />
+                                                        </button>
+
+                                                        {/* Hidden Inputs */}
+                                                        <input type="file" ref={imageInputRef} className="hidden" accept="image/*" onChange={(e) => handleDescriptionUpload(e, 'image')} />
+                                                        <input type="file" ref={videoInputRef} className="hidden" accept="video/*" onChange={(e) => handleDescriptionUpload(e, 'video')} />
+                                                        <input type="file" ref={htmlInputRef} className="hidden" accept=".html,text/html" onChange={(e) => handleDescriptionUpload(e, 'html')} />
+                                                    </div>
+                                                </>
+                                            ) : (
+                                                <div className="w-full p-4 h-64 overflow-y-auto prose prose-sm max-w-none bg-gray-50/50">
+                                                    {formData.description ? (
+                                                        <ReactMarkdown
+                                                            remarkPlugins={[remarkBreaks]}
+                                                            rehypePlugins={[rehypeRaw]}
+                                                            components={MarkdownComponents}
+                                                        >
+                                                            {formData.description}
+                                                        </ReactMarkdown>
+                                                    ) : (
+                                                        <p className="text-gray-400 text-center py-10">입력된 내용이 없습니다.</p>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                        <p className="text-xs text-gray-400 mt-2 text-right">
+                                            {activeTab === 'write' ? '※ 이미지를 추가하면 코드로 입력되며, [미리보기] 탭에서 실제 이미지를 확인할 수 있습니다.' : '※ 미리보기 모드입니다. 수정하려면 [작성하기] 탭을 클릭하세요.'}
+                                        </p>
                                     </div>
                                     {/* Visibility Toggle */}
                                     <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border">
