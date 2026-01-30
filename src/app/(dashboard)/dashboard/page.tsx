@@ -181,10 +181,9 @@ export default function DashboardPage() {
                                 {loading ? (
                                     <span className="animate-pulse bg-white/20 rounded h-8 w-64 block"></span>
                                 ) : (
-                                    <div className="flex items-center gap-2">
-                                        <span>안녕하세요, {displayName}!</span>
-                                        <span className="text-blue-200">AI 마스터 여정을 계속해볼까요?</span>
-                                    </div>
+                                    <span>
+                                        안녕하세요, {displayName}! <span className="text-blue-200">AI 마스터 여정을 계속해볼까요?</span>
+                                    </span>
                                 )}
                             </h1>
                             <p className="text-blue-100 text-sm md:text-base">
@@ -224,15 +223,17 @@ export default function DashboardPage() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    {weeks.map((week) => (
-                        <WeekCard
-                            key={week.id}
-                            week={week}
-                            isInstructor={isInstructor}
-                            onEdit={() => handleEditClick(week)}
-                            onSetCurrent={() => handleSetCurrentWeek(week.db_id)}
-                        />
-                    ))}
+                    {weeks
+                        .filter(week => week.id >= 1 && week.id <= 16)
+                        .map((week) => (
+                            <WeekCard
+                                key={week.id}
+                                week={week}
+                                isInstructor={isInstructor}
+                                onEdit={() => handleEditClick(week)}
+                                onSetCurrent={() => handleSetCurrentWeek(week.db_id)}
+                            />
+                        ))}
                 </div>
             </div>
 
