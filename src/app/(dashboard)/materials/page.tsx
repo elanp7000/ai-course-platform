@@ -587,6 +587,7 @@ export default function MaterialsPage() {
                                                         text = text.replace(/<img[^>]*>/g, '___IMG___');
                                                         text = text.replace(/<a[^>]*>.*?<\/a>/g, '___LINK___');
                                                         text = text.replace(/<[^>]+>/g, ''); // Strip remaining tags
+                                                        text = text.replace(/&nbsp;/g, ' '); // Fix: Replace &nbsp; with space
                                                     } else {
                                                         text = text.replace(/!\[.*?\]\(.*?\)/g, '___IMG___');
                                                         text = text.replace(/\[.*?\]\(.*?\)/g, '___LINK___');
