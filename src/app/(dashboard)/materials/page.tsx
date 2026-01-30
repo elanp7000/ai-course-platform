@@ -557,13 +557,13 @@ export default function MaterialsPage() {
                                     onClick={() => setViewingMaterial(material)}
                                 >
                                     <div className="flex items-center gap-4 flex-1 min-w-0">
-                                        <div className={`p - 3 rounded - lg shrink - 0 ${material.type === 'pdf' ? 'bg-red-50 text-red-600' :
+                                        <div className={`p-4 rounded-xl shrink-0 ${material.type === 'pdf' ? 'bg-red-50 text-red-600' :
                                             material.type === 'video' ? 'bg-purple-50 text-purple-600' :
                                                 material.type === 'image' ? 'bg-green-50 text-green-600' :
                                                     material.type === 'ai_tool' ? 'bg-indigo-50 text-indigo-600' :
                                                         'bg-blue-50 text-blue-600'
                                             } `}>
-                                            <Icon className="w-6 h-6" />
+                                            <Icon className="w-8 h-8" />
                                         </div>
                                         <div className="min-w-0">
                                             <div className="flex items-center gap-2 mb-1">
@@ -576,12 +576,38 @@ export default function MaterialsPage() {
                                                     </span>
                                                 )}
                                             </div>
-                                            <h3 className="font-bold text-gray-900 truncate">
+                                            <h3 className="font-bold text-gray-900 truncate text-lg">
                                                 {material.title}
                                             </h3>
-                                            <p className="text-sm text-gray-500 truncate max-w-xl">
-                                                {material.description?.replace(/(\*\*|__)(.*?)\1/g, '$2').replace(/(#+)(.*)/g, '$2').replace(/!\[.*?\]\(.*?\)/g, '[이미지]').replace(/\[.*?\]\(.*?\)/g, '[링크]') || material.content_url}
-                                            </p>
+                                            <div className="text-sm text-gray-400 truncate max-w-xl flex items-center gap-1">
+                                                {(() => {
+                                                    let text = material.description || "";
+                                                    // HTML to Text Preview Logic
+                                                    if (text.includes('<')) {
+                                                        // Replace img and a tags with markers
+                                                        text = text.replace(/<img[^>]*>/g, '___IMG___');
+                                                        text = text.replace(/<a[^>]*>.*?<\/a>/g, '___LINK___');
+                                                        // Strip other tags
+                                                        text = text.replace(/<[^>]+>/g, '');
+                                                    } else {
+                                                        // Fallback for Markdown (Legacy)
+                                                        text = text.replace(/!\[.*?\]\(.*?\)/g, '___IMG___');
+                                                        text = text.replace(/\[.*?\]\(.*?\)/g, '___LINK___');
+                                                        text = text.replace(/(\*\*|__)(.*?)\1/g, '$2').replace(/(#+)(.*)/g, '$2');
+                                                    }
+
+                                                    // content_url fallback
+                                                    if (!text && material.content_url) return material.content_url;
+
+                                                    // Split and Render
+                                                    const parts = text.split(/(___IMG___|___LINK___)/g);
+                                                    return parts.map((part, i) => {
+                                                        if (part === '___IMG___') return <span key={i} className="inline-flex items-center gap-0.5 bg-gray-100 px-1.5 py-0.5 rounded text-xs mx-0.5"><ImageIcon className="w-3 h-3" />이미지</span>;
+                                                        if (part === '___LINK___') return <span key={i} className="inline-flex items-center gap-0.5 bg-gray-100 px-1.5 py-0.5 rounded text-xs mx-0.5"><LinkIcon className="w-3 h-3" />링크</span>;
+                                                        return <span key={i}>{part}</span>;
+                                                    });
+                                                })()}
+                                            </div>
                                         </div>
                                     </div>
 
