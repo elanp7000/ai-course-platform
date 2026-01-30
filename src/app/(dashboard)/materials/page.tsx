@@ -158,6 +158,23 @@ export default function MaterialsPage() {
         imageInputRef.current?.click();
     };
 
+    // Custom Link Handler for Quill
+    const linkHandler = () => {
+        const quill = quillRef.current?.getEditor ? quillRef.current.getEditor() : quillRef.current;
+        if (!quill) return;
+
+        const range = quill.getSelection();
+        const url = prompt("링크 주소(URL)를 입력해주세요:");
+        if (!url) return; // User cancelled
+
+        if (range && range.length > 0) {
+            quill.format('link', url);
+        } else {
+            const text = prompt("링크에 표시할 텍스트를 입력해주세요:") || url;
+            quill.insertText(range ? range.index : quill.getLength(), text, 'link', url);
+        }
+    };
+
     const modules = useMemo(() => ({
         toolbar: {
             container: [
@@ -165,11 +182,11 @@ export default function MaterialsPage() {
                 ['bold', 'italic', 'underline', 'strike'],
                 [{ 'list': 'ordered' }, { 'list': 'bullet' }],
                 [{ 'color': [] }, { 'background': [] }],
-                ['link', 'image'],
-                ['clean']
+                ['link', 'image']
             ],
             handlers: {
-                image: imageHandler
+                image: imageHandler,
+                link: linkHandler
             }
         }
     }), []);
@@ -664,24 +681,33 @@ export default function MaterialsPage() {
                 isAdding && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
                         <div className="bg-white rounded-2xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200">
-                            <div className="p-6 border-b flex justify-between items-center bg-white z-10">
-                                <h2 className="text-xl font-bold">{editingMaterial ? "자료 수정" : "새 자료 등록"}</h2>
-                                <button onClick={handleCloseModal} className="text-gray-400 hover:text-gray-600">
-                                    <X className="w-6 h-6" />
+                            <div className="px-8 py-6 border-b flex justify-between items-center bg-gray-50/50 z-10">
+                                <div>
+                                    <h2 className="text-2xl font-bold text-gray-900">{editingMaterial ? "자료 수정" : "새 자료 등록"}</h2>
+                                    <p className="text-sm text-gray-500 mt-1">학생들에게 제공할 학습 자료를 등록하거나 수정합니다.</p>
+                                </div>
+                                <button onClick={handleCloseModal} className="text-gray-400 hover:text-gray-600 bg-white p-2 rounded-full shadow-sm hover:shadow transition-all">
+                                    <X className="w-5 h-5" />
                                 </button>
                             </div>
 
-                            <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
-                                <form id="materialForm" onSubmit={handleSubmit} className="space-y-6">
-                                    {/* Flex Container for Week & Title */}
-                                    <div className="grid md:grid-cols-2 gap-4">
+                            <div className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar bg-white">
+                                <form id="materialForm" onSubmit={handleSubmit} className="space-y-8">
+                                    {/* Section 1: Basic Info */}
+                                    <div className="grid md:grid-cols-2 gap-6 p-6 bg-gray-50 rounded-2xl border border-gray-100">
+                                        <div className="col-span-2 md:col-span-2 mb-2">
+                                            <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                                                <span className="w-1 h-6 bg-blue-500 rounded-full inline-block"></span>
+                                                기본 정보
+                                            </h3>
+                                        </div>
                                         <div>
                                             <label className="block text-sm font-bold text-gray-700 mb-2">주차 선택 <span className="text-red-500">*</span></label>
                                             <select
                                                 required
                                                 value={formData.week_id}
                                                 onChange={(e) => setFormData({ ...formData, week_id: e.target.value })}
-                                                className="w-full p-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                                                className="w-full p-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all shadow-sm"
                                             >
                                                 <option value="">주차를 선택하세요</option>
                                                 {weeks.map(week => (
@@ -698,106 +724,139 @@ export default function MaterialsPage() {
                                                 required
                                                 value={formData.title}
                                                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                                                className="w-full p-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                                                className="w-full p-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all shadow-sm"
                                                 placeholder="자료 제목을 입력하세요"
                                             />
                                         </div>
                                     </div>
 
-                                    {/* Type Selector */}
-                                    <div>
-                                        <label className="block text-sm font-bold text-gray-700 mb-2">유형 선택 <span className="text-red-500">*</span></label>
-                                        <div className="grid grid-cols-3 md:grid-cols-7 gap-2">
-                                            {[
-                                                { id: 'link', label: '링크', icon: LinkIcon },
-                                                { id: 'video', label: '동영상', icon: PlayCircle },
-                                                { id: 'pdf', label: 'PDF', icon: FileText },
-                                                { id: 'image', label: '이미지', icon: ImageIcon },
-                                                { id: 'html', label: 'HTML', icon: FileCode },
-                                                { id: 'text', label: '텍스트', icon: BookOpen },
-                                                { id: 'ai_tool', label: 'AI 도구', icon: Bot },
-                                            ].map((type) => (
-                                                <button
-                                                    key={type.id}
-                                                    type="button"
-                                                    onClick={() => setFormData({ ...formData, type: type.id as any })}
-                                                    className={`flex flex - col items - center justify - center p - 3 rounded - xl border transition - all ${formData.type === type.id
-                                                        ? 'bg-blue-600 text-white border-blue-600 ring-2 ring-blue-200 ring-offset-1'
-                                                        : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50 hover:border-gray-300'
-                                                        } `}
-                                                >
-                                                    <type.icon className="w-5 h-5 mb-1" />
-                                                    <span className="text-[10px] sm:text-xs font-medium whitespace-nowrap">{type.label}</span>
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
+                                    {/* Section 2: Content Type & URL */}
+                                    <div className="space-y-6">
+                                        <div>
+                                            <h3 className="font-semibold text-gray-900 flex items-center gap-2 mb-4">
+                                                <span className="w-1 h-6 bg-green-500 rounded-full inline-block"></span>
+                                                자료 유형 및 콘텐츠
+                                            </h3>
 
-                                    {/* Main Content Input */}
-                                    <div>
-                                        <label className="block text-sm font-bold text-gray-700 mb-2">
-                                            {['pdf', 'image', 'video', 'html'].includes(formData.type) ? '대표 파일 업로드' : '대표 링크 주소 (URL)'}
-                                        </label>
-                                        {['pdf', 'image', 'video', 'html'].includes(formData.type) ? (
-                                            <div className="border border-gray-200 rounded-xl p-2 bg-gray-50">
-                                                <input
-                                                    type="file"
-                                                    ref={fileInputRef}
-                                                    onChange={(e) => setFile(e.target.files?.[0] || null)}
-                                                    accept={
-                                                        formData.type === 'pdf' ? '.pdf' :
-                                                            formData.type === 'image' ? 'image/*' :
-                                                                formData.type === 'html' ? '.html,text/html' :
-                                                                    'video/*'
-                                                    }
-                                                    className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                                                />
-                                                {editingMaterial && formData.content_url && !file && (
-                                                    <p className="text-xs text-gray-500 mt-2 px-2">
-                                                        현재 파일: <a href={formData.content_url} target="_blank" className="text-blue-600 hover:underline">{formData.content_url.split('/').pop()}</a> (변경하려면 새 파일을 선택하세요)
-                                                    </p>
-                                                )}
+                                            <label className="block text-sm font-bold text-gray-700 mb-2">유형 선택 <span className="text-red-500">*</span></label>
+                                            <div className="grid grid-cols-3 md:grid-cols-7 gap-3">
+                                                {[
+                                                    { id: 'link', label: '링크', icon: LinkIcon },
+                                                    { id: 'video', label: '동영상', icon: PlayCircle },
+                                                    { id: 'pdf', label: 'PDF', icon: FileText },
+                                                    { id: 'image', label: '이미지', icon: ImageIcon },
+                                                    { id: 'html', label: 'HTML', icon: FileCode },
+                                                    { id: 'text', label: '텍스트', icon: BookOpen },
+                                                    { id: 'ai_tool', label: 'AI 도구', icon: Bot },
+                                                ].map((type) => (
+                                                    <button
+                                                        key={type.id}
+                                                        type="button"
+                                                        onClick={() => setFormData({ ...formData, type: type.id as any })}
+                                                        className={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all duration-200 ${formData.type === type.id
+                                                            ? 'bg-blue-600 text-white border-blue-600 shadow-md transform scale-105'
+                                                            : 'bg-white text-gray-500 border-gray-100 hover:bg-gray-50 hover:border-gray-300 hover:shadow-sm'
+                                                            } `}
+                                                    >
+                                                        <type.icon className="w-5 h-5 mb-1.5" />
+                                                        <span className="text-[10px] sm:text-xs font-semibold whitespace-nowrap">{type.label}</span>
+                                                    </button>
+                                                ))}
                                             </div>
-                                        ) : (
-                                            <input
-                                                type="url"
-                                                value={formData.content_url}
-                                                onChange={(e) => setFormData({ ...formData, content_url: e.target.value })}
-                                                className="w-full p-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-                                                placeholder="https://example.com"
-                                            />
-                                        )}
-                                        <p className="text-xs text-gray-400 mt-1">※ 목록에서 바로 접근할 수 있는 대표 콘텐츠입니다.</p>
-                                    </div>
-
-                                    {/* Summary Input */}
-                                    <div>
-                                        <label className="block text-sm font-bold text-gray-700 mb-2">한줄 설명 (목록 표시용)</label>
-                                        <input
-                                            type="text"
-                                            value={formData.summary || ""}
-                                            onChange={(e) => setFormData({ ...formData, summary: e.target.value })}
-                                            className="w-full p-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-                                            placeholder="목록에 표시될 짧은 설명을 입력하세요."
-                                        />
-                                        <p className="text-xs text-gray-400 mt-1">※ 이 설명은 목록 화면에서 제목 아래에 표시됩니다.</p>
-                                    </div>
-
-                                    {/* Rich Description - ReactQuill */}
-                                    <div>
-                                        <label className="block text-sm font-bold text-gray-700 mb-2">상세 설명</label>
-                                        <div className="border rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-blue-500 bg-white" style={{ minHeight: '300px' }}>
-                                            <ReactQuill
-                                                ref={quillRef}
-                                                theme="snow"
-                                                value={formData.description}
-                                                onChange={(value) => setFormData({ ...formData, description: value })}
-                                                modules={modules}
-                                                className="h-64"
-                                                placeholder="자료에 대한 상세 설명을 입력하세요."
-                                            />
                                         </div>
-                                        <p className="text-xs text-gray-400 mt-2">※ 이미지를 드래그하거나 도구 모음의 이미지 버튼을 사용하여 추가할 수 있습니다.</p>
+
+                                        {/* Main Content Input */}
+                                        <div className="bg-blue-50/50 p-6 rounded-2xl border border-blue-100">
+                                            <label className="block text-sm font-bold text-gray-800 mb-2">
+                                                {['pdf', 'image', 'video', 'html'].includes(formData.type) ? '대표 파일 업로드' : '대표 링크 주소 (URL)'}
+                                            </label>
+                                            {['pdf', 'image', 'video', 'html'].includes(formData.type) ? (
+                                                <div className="border-2 border-dashed border-blue-200 rounded-xl p-6 bg-white hover:bg-blue-50/30 transition-colors text-center cursor-pointer group" onClick={() => fileInputRef.current?.click()}>
+                                                    <input
+                                                        type="file"
+                                                        ref={fileInputRef}
+                                                        onChange={(e) => setFile(e.target.files?.[0] || null)}
+                                                        accept={
+                                                            formData.type === 'pdf' ? '.pdf' :
+                                                                formData.type === 'image' ? 'image/*' :
+                                                                    formData.type === 'html' ? '.html,text/html' :
+                                                                        'video/*'
+                                                        }
+                                                        className="hidden"
+                                                    />
+                                                    <div className="flex flex-col items-center gap-2">
+                                                        <Upload className="w-8 h-8 text-blue-400 group-hover:text-blue-600 transition-colors" />
+                                                        <p className="text-sm font-medium text-gray-600 group-hover:text-blue-700">
+                                                            {file ? file.name : "클릭하여 파일을 선택하세요"}
+                                                        </p>
+                                                        {!file && <p className="text-xs text-gray-400">또는 파일을 여기로 드래그하세요</p>}
+                                                    </div>
+                                                    {editingMaterial && formData.content_url && !file && (
+                                                        <p className="text-xs text-gray-500 mt-4 px-2 pt-4 border-t w-full">
+                                                            현재 파일: <a href={formData.content_url} target="_blank" className="text-blue-600 hover:underline font-medium">{formData.content_url.split('/').pop()}</a>
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            ) : (
+                                                <div className="relative">
+                                                    <LinkIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                                                    <input
+                                                        type="url"
+                                                        value={formData.content_url}
+                                                        onChange={(e) => setFormData({ ...formData, content_url: e.target.value })}
+                                                        className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none shadow-sm transition-all"
+                                                        placeholder="https://example.com"
+                                                    />
+                                                </div>
+                                            )}
+                                            <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
+                                                <CheckCircle className="w-3 h-3 text-green-500" />
+                                                목록에서 학생들이 클릭했을 때 바로 이동하는 주요 콘텐츠입니다.
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    {/* Section 3: Descriptions */}
+                                    <div className="space-y-6">
+                                        <div>
+                                            <h3 className="font-semibold text-gray-900 flex items-center gap-2 mb-4">
+                                                <span className="w-1 h-6 bg-purple-500 rounded-full inline-block"></span>
+                                                설명 및 상세 내용
+                                            </h3>
+
+                                            {/* Summary Input */}
+                                            <div className="mb-6">
+                                                <label className="block text-sm font-bold text-gray-700 mb-2">한줄 설명 (목록 표시용)</label>
+                                                <input
+                                                    type="text"
+                                                    value={formData.summary || ""}
+                                                    onChange={(e) => setFormData({ ...formData, summary: e.target.value })}
+                                                    className="w-full p-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all shadow-sm"
+                                                    placeholder="목록에 표시될 짧은 설명을 입력하세요."
+                                                />
+                                                <p className="text-xs text-gray-500 mt-1">※ 이 설명은 목록 화면에서 제목 아래에 표시됩니다.</p>
+                                            </div>
+
+                                            {/* Rich Description - ReactQuill */}
+                                            <div>
+                                                <div className="flex justify-between items-end mb-2">
+                                                    <label className="block text-sm font-bold text-gray-700">상세 설명</label>
+                                                    <span className="text-xs text-gray-400">이미지 및 링크 삽입 가능</span>
+                                                </div>
+                                                <div className="border border-gray-200 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-blue-500 bg-white shadow-sm" style={{ minHeight: '300px' }}>
+                                                    <ReactQuill
+                                                        ref={quillRef}
+                                                        theme="snow"
+                                                        value={formData.description}
+                                                        onChange={(value) => setFormData({ ...formData, description: value })}
+                                                        modules={modules}
+                                                        className="h-64"
+                                                        placeholder="자료에 대한 상세 설명을 입력하세요."
+                                                    />
+                                                </div>
+                                                <p className="text-xs text-gray-400 mt-2">※ 텍스트, 이미지, 비디오 등을 자유롭게 작성할 수 있습니다.</p>
+                                            </div>
+                                        </div>
                                     </div>
 
                                     {/* Hidden Inputs for Custom Handler */}
