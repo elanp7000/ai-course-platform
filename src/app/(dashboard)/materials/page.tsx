@@ -588,11 +588,12 @@ export default function MaterialsPage() {
                                                         text = text.replace(/<a[^>]*>.*?<\/a>/g, '___LINK___');
                                                         text = text.replace(/<[^>]+>/g, ''); // Strip remaining tags
                                                         text = text.replace(/&nbsp;/g, ' '); // Fix: Replace &nbsp; with space
-                                                    } else {
-                                                        text = text.replace(/!\[.*?\]\(.*?\)/g, '___IMG___');
-                                                        text = text.replace(/\[.*?\]\(.*?\)/g, '___LINK___');
-                                                        text = text.replace(/(\*\*|__)(.*?)\1/g, '$2').replace(/(#+)(.*)/g, '$2');
                                                     }
+
+                                                    // Process Markdown (always run this to catch Markdown inside HTML or plain Markdown)
+                                                    text = text.replace(/!\[.*?\]\(.*?\)/g, '___IMG___');
+                                                    text = text.replace(/\[.*?\]\(.*?\)/g, '___LINK___');
+                                                    text = text.replace(/(\*\*|__)(.*?)\1/g, '$2').replace(/(#+)(.*)/g, '$2');
 
                                                     if (!text && material.content_url) return <span className="truncate">{material.content_url}</span>;
 
@@ -612,15 +613,7 @@ export default function MaterialsPage() {
                                     </div>
 
                                     <div className="flex items-center gap-2">
-                                        {material.content_url && ['pdf', 'html'].includes(material.type) && (
-                                            <button
-                                                onClick={(e) => handleMaterialAccess(e, material)}
-                                                className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
-                                                title="다운로드"
-                                            >
-                                                <Download className="w-5 h-5" />
-                                            </button>
-                                        )}
+                                        {/* Download button removed as per request */}
                                         {isInstructor && (
                                             <>
                                                 <div className={`flex flex - col gap - 1 mr - 2 ${isFiltering ? 'opacity-30 cursor-not-allowed' : ''} `}>
