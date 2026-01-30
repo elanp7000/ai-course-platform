@@ -29,6 +29,7 @@ type Material = {
     sort_order: number;
     weeks?: { title: string, week_number: number }; // Joined data
     is_visible?: boolean;
+    summary?: string;
 };
 
 type Week = {
@@ -84,6 +85,7 @@ export default function MaterialsPage() {
         type: "link" as Material['type'],
         content_url: "",
         description: "", // Now supports HTML from Quill
+        summary: "",
         is_visible: true
     });
     const [file, setFile] = useState<File | null>(null);
@@ -304,6 +306,7 @@ export default function MaterialsPage() {
                     title: formData.title,
                     type: formData.type,
                     description: formData.description,
+                    summary: formData.summary,
                     content_url: finalContentUrl,
                     is_visible: formData.is_visible
                 }).eq('id', editingMaterial.id);
@@ -315,6 +318,7 @@ export default function MaterialsPage() {
                     title: formData.title,
                     type: formData.type,
                     description: formData.description,
+                    summary: formData.summary,
                     content_url: finalContentUrl,
                     is_visible: formData.is_visible
                 });
@@ -343,6 +347,7 @@ export default function MaterialsPage() {
             type: item.type,
             content_url: item.content_url || "",
             description: item.description || "",
+            summary: item.summary || "",
             is_visible: item.is_visible ?? true
         });
         setFile(null);
@@ -402,7 +407,7 @@ export default function MaterialsPage() {
     const handleCloseModal = () => {
         setIsAdding(false);
         setEditingMaterial(null);
-        setFormData({ week_id: "", title: "", type: "link", content_url: "", description: "", is_visible: true });
+        setFormData({ week_id: "", title: "", type: "link", content_url: "", description: "", summary: "", is_visible: true });
         setFile(null);
 
     };
@@ -759,6 +764,19 @@ export default function MaterialsPage() {
                                             />
                                         )}
                                         <p className="text-xs text-gray-400 mt-1">※ 목록에서 바로 접근할 수 있는 대표 콘텐츠입니다.</p>
+                                    </div>
+
+                                    {/* Summary Input */}
+                                    <div>
+                                        <label className="block text-sm font-bold text-gray-700 mb-2">한줄 설명 (목록 표시용)</label>
+                                        <input
+                                            type="text"
+                                            value={formData.summary || ""}
+                                            onChange={(e) => setFormData({ ...formData, summary: e.target.value })}
+                                            className="w-full p-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                                            placeholder="목록에 표시될 짧은 설명을 입력하세요."
+                                        />
+                                        <p className="text-xs text-gray-400 mt-1">※ 이 설명은 목록 화면에서 제목 아래에 표시됩니다.</p>
                                     </div>
 
                                     {/* Rich Description - ReactQuill */}
