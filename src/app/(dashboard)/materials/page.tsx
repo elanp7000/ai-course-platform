@@ -846,8 +846,13 @@ export default function MaterialsPage() {
                                 {/* Markdown Description */}
                                 <div className="prose prose-blue max-w-none">
                                     <div className="prose prose-blue max-w-none">
-                                        {/* Use dangerouslySetInnerHTML to render HTML from Quill */}
-                                        <div dangerouslySetInnerHTML={{ __html: viewingMaterial.description || "상세 설명이 없습니다." }} />
+                                        <ReactMarkdown
+                                            remarkPlugins={[remarkBreaks]}
+                                            rehypePlugins={[rehypeRaw]}
+                                            components={MarkdownComponents}
+                                        >
+                                            {viewingMaterial.description || "상세 설명이 없습니다."}
+                                        </ReactMarkdown>
                                     </div>
                                 </div>
                             </div>
