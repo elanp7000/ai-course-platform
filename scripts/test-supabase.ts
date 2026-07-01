@@ -6,18 +6,18 @@ import path from 'path';
 dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabasePublishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
 console.log('Testing Supabase Connection...');
 console.log('URL:', supabaseUrl ? 'Found' : 'Missing');
-console.log('Key:', supabaseAnonKey ? 'Found' : 'Missing');
+console.log('Key:', supabasePublishableKey ? 'Found' : 'Missing');
 
-if (!supabaseUrl || !supabaseAnonKey) {
+if (!supabaseUrl || !supabasePublishableKey) {
     console.error('Missing environment variables!');
     process.exit(1);
 }
 
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+const supabase = createClient(supabaseUrl, supabasePublishableKey);
 
 async function testConnection() {
     try {
